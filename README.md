@@ -50,8 +50,8 @@ ZAQ is a single Elixir/OTP application composed of five internal services. Each 
 
 ## Prerequisites
 
-- Elixir 1.17+
-- Erlang/OTP 27+
+- Elixir 1.19.5
+- Erlang/OTP 28
 - PostgreSQL 16+ with [pgvector](https://github.com/pgvector/pgvector) extension
 - Node.js 20+ (for asset compilation)
 

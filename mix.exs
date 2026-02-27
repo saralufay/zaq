@@ -21,7 +21,7 @@ defmodule Zaq.MixProject do
   def application do
     [
       mod: {Zaq.Application, []},
-      extra_applications: [:logger, :runtime_tools]
+      extra_applications: [:logger, :runtime_tools, :crypto]
     ]
   end
 

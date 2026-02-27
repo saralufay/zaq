@@ -12,7 +12,8 @@ defmodule Zaq.Application do
         ZaqWeb.Telemetry,
         Zaq.Repo,
         {DNSCluster, query: Application.get_env(:zaq, :dns_cluster_query) || :ignore},
-        {Phoenix.PubSub, name: Zaq.PubSub}
+        {Phoenix.PubSub, name: Zaq.PubSub},
+        Zaq.License.FeatureStore
       ]
       |> maybe_add(roles, :engine, Zaq.Engine.Supervisor)
       |> maybe_add(roles, :agent, Zaq.Agent.Supervisor)

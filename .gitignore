@@ -35,3 +35,7 @@ zaq-*.tar
 npm-debug.log
 /assets/node_modules/
 
+/priv/keys
+/priv/licenses
+
+

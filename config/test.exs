@@ -20,6 +20,10 @@ config :zaq, ZaqWeb.Endpoint,
   secret_key_base: "ciF/5ckzC38nrulQi0vIRpenNCD4oSsnLdBCLJhfXQmaRz0e6/iD9T15avsW/pV8",
   server: false
 
+config :zaq, roles: [:bo]
+
+config :zaq, :license_runtime_key, true
+
 # In test we don't send emails
 config :zaq, Zaq.Mailer, adapter: Swoosh.Adapters.Test
 
