@@ -1,5 +1,3 @@
-# lib/zaq_web/live/bo/roles_live.ex
-
 defmodule ZaqWeb.Live.BO.RolesLive do
   use ZaqWeb, :live_view
 
@@ -7,7 +5,11 @@ defmodule ZaqWeb.Live.BO.RolesLive do
 
   def mount(_params, _session, socket) do
     roles = Accounts.list_roles() |> Zaq.Repo.preload(:users)
-    {:ok, assign(socket, :roles, roles)}
+
+    {:ok,
+     socket
+     |> assign(:roles, roles)
+     |> assign(:current_path, "/bo/roles")}
   end
 
   def handle_event("delete", %{"id" => id}, socket) do

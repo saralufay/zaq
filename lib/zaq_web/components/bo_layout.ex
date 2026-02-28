@@ -7,6 +7,7 @@ defmodule ZaqWeb.Components.BOLayout do
 
   attr :current_user, :map, required: true
   attr :page_title, :string, default: "Dashboard"
+  attr :current_path, :string, default: ""
   slot :inner_block, required: true
 
   def bo_layout(assigns) do
@@ -26,15 +27,42 @@ defmodule ZaqWeb.Components.BOLayout do
         
     <!-- Nav -->
         <nav class="flex-1 py-4 px-3 space-y-1">
-          <.nav_item href={~p"/bo/dashboard"} icon="dashboard" label="Dashboard" />
+          <.nav_item
+            href={~p"/bo/dashboard"}
+            icon="dashboard"
+            label="Dashboard"
+            active={@current_path == "/bo/dashboard"}
+          />
           
     <!-- Accounts -->
           <div class="pt-4">
             <p class="font-mono text-[0.6rem] text-white/30 uppercase tracking-widest px-3 mb-2">
               Accounts
             </p>
-            <.nav_item href={~p"/bo/users"} icon="users" label="Users" />
-            <.nav_item href={~p"/bo/roles"} icon="roles" label="Roles" />
+            <.nav_item
+              href={~p"/bo/users"}
+              icon="users"
+              label="Users"
+              active={String.starts_with?(@current_path, "/bo/users")}
+            />
+            <.nav_item
+              href={~p"/bo/roles"}
+              icon="roles"
+              label="Roles"
+              active={String.starts_with?(@current_path, "/bo/roles")}
+            />
+          </div>
+          <!-- System -->
+          <div class="pt-4">
+            <p class="font-mono text-[0.6rem] text-white/30 uppercase tracking-widest px-3 mb-2">
+              System
+            </p>
+            <.nav_item
+              href={~p"/bo/license"}
+              icon="license"
+              label="License"
+              active={@current_path == "/bo/license"}
+            />
           </div>
         </nav>
         
@@ -78,11 +106,22 @@ defmodule ZaqWeb.Components.BOLayout do
     """
   end
 
+  attr :href, :string, required: true
+  attr :icon, :string, required: true
+  attr :label, :string, required: true
+  attr :active, :boolean, default: false
+
   defp nav_item(assigns) do
     ~H"""
     <a
       href={@href}
-      class="flex items-center gap-3 px-3 py-2.5 rounded-lg font-mono text-[0.82rem] text-white/60 hover:text-white hover:bg-white/5 transition-colors"
+      class={[
+        "flex items-center gap-3 px-3 py-2.5 rounded-lg font-mono text-[0.82rem] transition-colors",
+        if(@active,
+          do: "bg-[#03b6d4] text-white",
+          else: "text-white/60 hover:text-white hover:bg-white/5"
+        )
+      ]}
     >
       <svg
         :if={@icon == "dashboard"}
@@ -127,6 +166,17 @@ defmodule ZaqWeb.Components.BOLayout do
         viewBox="0 0 24 24"
       >
         <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z" />
+      </svg>
+      <svg
+        :if={@icon == "license"}
+        class="w-[18px] h-[18px]"
+        fill="none"
+        stroke="currentColor"
+        stroke-width="1.8"
+        viewBox="0 0 24 24"
+      >
+        <rect x="3" y="11" width="18" height="11" rx="2" ry="2" />
+        <path d="M7 11V7a5 5 0 0 1 10 0v4" />
       </svg>
       {@label}
     </a>

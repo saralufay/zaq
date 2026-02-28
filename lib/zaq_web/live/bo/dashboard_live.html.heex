@@ -1,3 +1,163 @@
-<ZaqWeb.Components.BOLayout.bo_layout current_user={@current_user} page_title="Dashboard">
-  <p class="text-[#4a5a7a] font-mono">Welcome to ZAQ Back Office</p>
+<ZaqWeb.Components.BOLayout.bo_layout
+  current_user={@current_user}
+  page_title="Dashboard"
+  current_path={@current_path}
+>
+  <!-- Metric Cards -->
+  <div class="grid grid-cols-5 gap-4 mb-8">
+    <div class="bg-white rounded-xl border border-black/10 p-5">
+      <p class="font-mono text-[0.65rem] text-black/40 uppercase tracking-wider mb-1">Users</p>
+      <p class="font-mono text-2xl font-bold text-black">{@user_count}</p>
+    </div>
+    <div class="bg-white rounded-xl border border-black/10 p-5">
+      <p class="font-mono text-[0.65rem] text-black/40 uppercase tracking-wider mb-1">Sessions</p>
+      <p class="font-mono text-2xl font-bold text-black">{@session_count}</p>
+      <p class="font-mono text-[0.6rem] text-black/30 mt-1">placeholder</p>
+    </div>
+    <div class="bg-white rounded-xl border border-black/10 p-5">
+      <p class="font-mono text-[0.65rem] text-black/40 uppercase tracking-wider mb-1">
+        Documents
+      </p>
+      <p class="font-mono text-2xl font-bold text-black">{@document_count}</p>
+      <p class="font-mono text-[0.6rem] text-black/30 mt-1">placeholder</p>
+    </div>
+    <div class="bg-white rounded-xl border border-black/10 p-5">
+      <p class="font-mono text-[0.65rem] text-black/40 uppercase tracking-wider mb-1">
+        Embeddings
+      </p>
+      <p class="font-mono text-2xl font-bold text-black">{@embedding_count}</p>
+      <p class="font-mono text-[0.6rem] text-black/30 mt-1">placeholder</p>
+    </div>
+    <div class="bg-white rounded-xl border border-black/10 p-5">
+      <p class="font-mono text-[0.65rem] text-black/40 uppercase tracking-wider mb-1">Channels</p>
+      <p class="font-mono text-2xl font-bold text-black">{@channel_count}</p>
+      <p class="font-mono text-[0.6rem] text-black/30 mt-1">placeholder</p>
+    </div>
+  </div>
+
+  <div class="grid grid-cols-3 gap-6">
+    <!-- Services -->
+    <div class="col-span-2">
+      <p class="font-mono text-[0.7rem] text-black/40 uppercase tracking-wider mb-3">Services</p>
+      <div class="bg-white rounded-xl border border-black/10 overflow-hidden">
+        <table class="w-full">
+          <thead>
+            <tr class="border-b border-black/10">
+              <th class="text-left font-mono text-[0.7rem] text-black/40 uppercase tracking-wider px-6 py-3">
+                Service
+              </th>
+              <th class="text-left font-mono text-[0.7rem] text-black/40 uppercase tracking-wider px-6 py-3">
+                Description
+              </th>
+              <th class="text-right font-mono text-[0.7rem] text-black/40 uppercase tracking-wider px-6 py-3">
+                Status
+              </th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr
+              :for={svc <- @services}
+              class="border-b border-black/5 last:border-0 hover:bg-black/[0.02]"
+            >
+              <td class="font-mono text-sm font-bold text-black px-6 py-4">{svc.name}</td>
+              <td class="font-mono text-[0.75rem] text-black/50 px-6 py-4">{svc.description}</td>
+              <td class="px-6 py-4 text-right">
+                <span
+                  :if={svc.active}
+                  class="font-mono text-[0.7rem] px-2 py-1 rounded bg-emerald-100 text-emerald-700"
+                >
+                  Running
+                </span>
+                <span
+                  :if={!svc.active}
+                  class="font-mono text-[0.7rem] px-2 py-1 rounded bg-black/5 text-black/30"
+                >
+                  Disabled
+                </span>
+              </td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+    
+<!-- License Card -->
+    <div>
+      <p class="font-mono text-[0.7rem] text-black/40 uppercase tracking-wider mb-3">License</p>
+      <%= if @license_data do %>
+        <div class="bg-white rounded-xl border border-black/10 p-5 space-y-4">
+          <div class="flex items-center gap-3">
+            <div class="w-9 h-9 rounded-lg bg-emerald-100 grid place-items-center">
+              <svg
+                class="w-[18px] h-[18px] text-emerald-600"
+                fill="none"
+                stroke="currentColor"
+                stroke-width="2"
+                viewBox="0 0 24 24"
+              >
+                <path d="M9 12l2 2 4-4" /><circle cx="12" cy="12" r="10" />
+              </svg>
+            </div>
+            <div>
+              <p class="font-mono text-sm font-bold text-black">
+                {@license_data["company_name"]}
+              </p>
+              <p class="font-mono text-[0.65rem] text-black/40">{@license_data["license_key"]}</p>
+            </div>
+          </div>
+          <div class="border-t border-black/5 pt-3 space-y-2">
+            <div class="flex justify-between">
+              <p class="font-mono text-[0.7rem] text-black/40">Features</p>
+              <p class="font-mono text-[0.7rem] text-black">
+                {length(@license_data["features"])}
+              </p>
+            </div>
+            <div class="flex justify-between">
+              <p class="font-mono text-[0.7rem] text-black/40">Days Left</p>
+              <p class={[
+                "font-mono text-[0.7rem] font-bold",
+                cond do
+                  @days_left == nil -> "text-black"
+                  @days_left <= 30 -> "text-red-600"
+                  @days_left <= 90 -> "text-amber-600"
+                  true -> "text-emerald-600"
+                end
+              ]}>
+                {@days_left}
+              </p>
+            </div>
+          </div>
+          <.link
+            href={~p"/bo/license"}
+            class="block text-center font-mono text-[0.75rem] text-[#03b6d4] hover:underline"
+          >
+            View Details →
+          </.link>
+        </div>
+      <% else %>
+        <div class="bg-white rounded-xl border border-dashed border-black/15 p-5 text-center">
+          <div class="w-9 h-9 rounded-lg bg-black/5 grid place-items-center mx-auto mb-3">
+            <svg
+              class="w-[18px] h-[18px] text-black/30"
+              fill="none"
+              stroke="currentColor"
+              stroke-width="1.8"
+              viewBox="0 0 24 24"
+            >
+              <rect x="3" y="11" width="18" height="11" rx="2" ry="2" />
+              <path d="M7 11V7a5 5 0 0 1 10 0v4" />
+            </svg>
+          </div>
+          <p class="font-mono text-sm font-bold text-black mb-1">No License</p>
+          <p class="font-mono text-[0.7rem] text-black/40 mb-3">Running in basic mode</p>
+          <.link
+            href={~p"/bo/license"}
+            class="inline-block font-mono text-[0.75rem] font-bold px-4 py-2 rounded-lg bg-[#03b6d4] text-white hover:bg-[#03b6d4]/90 transition-colors"
+          >
+            Learn More
+          </.link>
+        </div>
+      <% end %>
+    </div>
+  </div>
 </ZaqWeb.Components.BOLayout.bo_layout>

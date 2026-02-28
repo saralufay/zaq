@@ -1,0 +1,210 @@
+<ZaqWeb.Components.BOLayout.bo_layout
+  current_user={@current_user}
+  page_title="License"
+  current_path={@current_path}
+>
+  <%= if @license_data do %>
+    <!-- Licensed State -->
+    <div class="space-y-6">
+      <!-- License Status Card -->
+      <div class="bg-white rounded-xl border border-black/10 p-6">
+        <div class="flex items-center justify-between mb-6">
+          <div class="flex items-center gap-3">
+            <div class="w-10 h-10 rounded-lg bg-emerald-100 grid place-items-center">
+              <svg
+                class="w-5 h-5 text-emerald-600"
+                fill="none"
+                stroke="currentColor"
+                stroke-width="2"
+                viewBox="0 0 24 24"
+              >
+                <path d="M9 12l2 2 4-4" /><circle cx="12" cy="12" r="10" />
+              </svg>
+            </div>
+            <div>
+              <p class="font-mono text-sm font-bold text-black">License Active</p>
+              <p class="font-mono text-[0.7rem] text-black/40">{@license_data["license_key"]}</p>
+            </div>
+          </div>
+          <span class="font-mono text-[0.7rem] px-3 py-1 rounded-full bg-emerald-100 text-emerald-700">
+            Active
+          </span>
+        </div>
+
+        <div class="grid grid-cols-4 gap-6">
+          <div>
+            <p class="font-mono text-[0.65rem] text-black/40 uppercase tracking-wider mb-1">
+              Company
+            </p>
+            <p class="font-mono text-sm text-black">{@license_data["company_name"]}</p>
+          </div>
+          <div>
+            <p class="font-mono text-[0.65rem] text-black/40 uppercase tracking-wider mb-1">
+              Expires
+            </p>
+            <p class="font-mono text-sm text-black">{format_date(@license_data["expires_at"])}</p>
+          </div>
+          <div>
+            <p class="font-mono text-[0.65rem] text-black/40 uppercase tracking-wider mb-1">
+              Loaded Modules
+            </p>
+            <p class="font-mono text-sm text-black">{length(@loaded_modules)}</p>
+          </div>
+          <div>
+            <p class="font-mono text-[0.65rem] text-black/40 uppercase tracking-wider mb-1">
+              Days Left
+            </p>
+            <p class={[
+              "font-mono text-sm font-bold",
+              cond do
+                days_left(@license_data["expires_at"]) == nil -> "text-black"
+                days_left(@license_data["expires_at"]) <= 30 -> "text-red-600"
+                days_left(@license_data["expires_at"]) <= 90 -> "text-amber-600"
+                true -> "text-emerald-600"
+              end
+            ]}>
+              {days_left(@license_data["expires_at"])} days
+            </p>
+          </div>
+        </div>
+      </div>
+      
+<!-- Licensed Features -->
+      <div>
+        <p class="font-mono text-[0.7rem] text-black/40 uppercase tracking-wider mb-3">
+          Licensed Features
+        </p>
+        <div class="grid grid-cols-2 gap-4">
+          <div
+            :for={feature <- @license_data["features"]}
+            class="bg-white rounded-xl border border-black/10 p-5 flex items-start gap-4"
+          >
+            <div class="w-9 h-9 rounded-lg bg-[#03b6d4]/10 grid place-items-center flex-shrink-0">
+              <svg
+                class="w-[18px] h-[18px] text-[#03b6d4]"
+                fill="none"
+                stroke="currentColor"
+                stroke-width="1.8"
+                viewBox="0 0 24 24"
+              >
+                <path d="M9 12l2 2 4-4" /><circle cx="12" cy="12" r="10" />
+              </svg>
+            </div>
+            <div>
+              <p class="font-mono text-sm font-bold text-black">{feature["name"]}</p>
+              <p class="font-mono text-[0.75rem] text-black/50 mt-1">{feature["description"]}</p>
+              <div class="flex flex-wrap gap-1.5 mt-2">
+                <span
+                  :for={tag <- feature["module_tags"] || []}
+                  class="font-mono text-[0.6rem] px-2 py-0.5 rounded bg-black/5 text-black/40"
+                >
+                  {tag}
+                </span>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+      <!-- Locked Features — Upgrade -->
+      <div :if={@locked_features != []}>
+        <p class="font-mono text-[0.7rem] text-black/40 uppercase tracking-wider mb-3">
+          Available to Unlock
+        </p>
+        <div class="grid grid-cols-2 gap-4">
+          <div
+            :for={feature <- @locked_features}
+            class="bg-white rounded-xl border border-dashed border-black/15 p-5 flex items-start gap-4 opacity-60"
+          >
+            <div class="w-9 h-9 rounded-lg bg-black/5 grid place-items-center flex-shrink-0">
+              <.feature_icon icon={feature.icon} />
+            </div>
+            <div>
+              <div class="flex items-center gap-2">
+                <p class="font-mono text-sm font-bold text-black">{feature.name}</p>
+                <span class="font-mono text-[0.6rem] px-2 py-0.5 rounded bg-black/5 text-black/30">
+                  Locked
+                </span>
+              </div>
+              <p class="font-mono text-[0.75rem] text-black/50 mt-1">{feature.description}</p>
+            </div>
+          </div>
+        </div>
+        <div class="mt-4 text-center">
+          <.link
+            href="mailto:sales@zaq.ai?subject=License%20Upgrade%20Request"
+            class="inline-block font-mono text-[0.8rem] font-bold px-5 py-2.5 rounded-lg bg-[#3c4b64] text-white hover:bg-[#3c4b64]/90 transition-colors"
+          >
+            Contact Sales to Upgrade
+          </.link>
+        </div>
+      </div>
+    </div>
+  <% else %>
+    <!-- No License — Marketing Page -->
+    <div class="space-y-8">
+      <!-- Hero -->
+      <div class="bg-white rounded-xl border border-black/10 p-8 text-center">
+        <div class="w-14 h-14 rounded-2xl bg-[#03b6d4]/10 grid place-items-center mx-auto mb-4">
+          <svg
+            class="w-7 h-7 text-[#03b6d4]"
+            fill="none"
+            stroke="currentColor"
+            stroke-width="1.8"
+            viewBox="0 0 24 24"
+          >
+            <rect x="3" y="11" width="18" height="11" rx="2" ry="2" />
+            <path d="M7 11V7a5 5 0 0 1 10 0v4" />
+          </svg>
+        </div>
+        <h2 class="font-mono text-xl font-bold text-black mb-2">Unlock the full power of ZAQ</h2>
+        <p class="font-mono text-sm text-black/50 max-w-md mx-auto">
+          Your instance is running in basic mode. Request a license to enable premium features
+          including advanced AI capabilities, integrations, and more.
+        </p>
+        <.link
+          href="mailto:sales@zaq.ai?subject=License%20Request&body=Company%20Name:%0AContact%20Name:%0ANumber%20of%20Users:%0A"
+          class="inline-block mt-6 font-mono text-sm font-bold px-6 py-3 rounded-lg bg-[#03b6d4] text-white hover:bg-[#03b6d4]/90 transition-colors"
+        >
+          Request a License
+        </.link>
+      </div>
+      
+<!-- Feature Grid -->
+      <div>
+        <p class="font-mono text-[0.7rem] text-black/40 uppercase tracking-wider mb-3">
+          Available with a License
+        </p>
+        <div class="grid grid-cols-2 gap-4">
+          <div
+            :for={feature <- @zaq_features}
+            class="bg-white rounded-xl border border-black/10 p-5 flex items-start gap-4"
+          >
+            <div class="w-9 h-9 rounded-lg bg-black/5 grid place-items-center flex-shrink-0">
+              <.feature_icon icon={feature.icon} />
+            </div>
+            <div>
+              <p class="font-mono text-sm font-bold text-black">{feature.name}</p>
+              <p class="font-mono text-[0.75rem] text-black/50 mt-1">{feature.description}</p>
+            </div>
+          </div>
+        </div>
+      </div>
+      
+<!-- CTA Footer -->
+      <div class="bg-[#3c4b64] rounded-xl p-6 flex items-center justify-between">
+        <div>
+          <p class="font-mono text-sm font-bold text-white">Ready to get started?</p>
+          <p class="font-mono text-[0.75rem] text-white/50 mt-1">
+            Contact our team to receive your license file and unlock all features.
+          </p>
+        </div>
+        <.link
+          href="mailto:sales@zaq.ai?subject=License%20Request"
+          class="font-mono text-sm font-bold px-5 py-2.5 rounded-lg bg-[#03b6d4] text-white hover:bg-[#03b6d4]/90 transition-colors flex-shrink-0"
+        >
+          Contact Sales
+        </.link>
+      </div>
+    </div>
+  <% end %>
+</ZaqWeb.Components.BOLayout.bo_layout>

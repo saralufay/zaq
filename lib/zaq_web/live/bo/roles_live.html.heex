@@ -1,6 +1,10 @@
 <!-- lib/zaq_web/live/bo/roles_live.html.heex -->
 
-<ZaqWeb.Components.BOLayout.bo_layout current_user={@current_user} page_title="Roles">
+<ZaqWeb.Components.BOLayout.bo_layout
+  current_user={@current_user}
+  page_title="Roles"
+  current_path={@current_path}
+>
   <div class="flex justify-between items-center mb-6">
     <p class="font-mono text-sm text-black/40">{length(@roles)} roles</p>
     <a

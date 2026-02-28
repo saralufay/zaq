@@ -4,7 +4,10 @@ defmodule ZaqWeb.Live.BO.UsersLive do
   alias Zaq.Accounts
 
   def mount(_params, _session, socket) do
-    {:ok, assign(socket, :users, Accounts.list_users())}
+    {:ok,
+     socket
+     |> assign(:users, Accounts.list_users())
+     |> assign(:current_path, "/bo/users")}
   end
 
   def handle_event("delete", %{"id" => id}, socket) do

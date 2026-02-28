@@ -48,6 +48,7 @@ defmodule ZaqWeb.Router do
       live "/roles", Live.BO.RolesLive
       live "/roles/new", Live.BO.RoleFormLive, :new
       live "/roles/:id/edit", Live.BO.RoleFormLive, :edit
+      live "/license", Live.BO.LicenseLive
     end
   end
 

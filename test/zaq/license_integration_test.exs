@@ -7,6 +7,8 @@ defmodule Zaq.License.IntegrationTest do
 
   use ExUnit.Case, async: false
 
+  import ExUnit.CaptureLog
+
   alias Zaq.License.{BeamDecryptor, FeatureStore, Loader}
 
   @keys_dir "priv/keys"
@@ -107,12 +109,12 @@ defmodule Zaq.License.IntegrationTest do
       assert license_data["company"]["name"] == "Test Corp"
 
       # 8. Verify module is callable
-      # credo:disable-for-next-line Credo.Check.Design.AliasUsage
-      assert {:ok, "classified: hello"} = LicenseManager.Paid.Ontology.classify("hello")
+      module = Module.concat([LicenseManager, Paid, Ontology])
+      assert {:ok, "classified: hello"} = module.classify("hello")
 
       # 9. Verify FeatureStore
       assert FeatureStore.feature_loaded?("ontology")
-      assert FeatureStore.module_loaded?(LicenseManager.Paid.Ontology)
+      assert FeatureStore.module_loaded?(module)
     end
 
     test "rejects expired license", %{priv: priv, tmp_dir: tmp_dir} do
@@ -137,7 +139,9 @@ defmodule Zaq.License.IntegrationTest do
         [:compressed]
       )
 
-      assert {:error, :license_expired} = Loader.load(license_path)
+      capture_log(fn ->
+        assert {:error, :license_expired} = Loader.load(license_path)
+      end)
     end
 
     test "rejects tampered payload", %{priv: priv, tmp_dir: tmp_dir} do
@@ -174,7 +178,9 @@ defmodule Zaq.License.IntegrationTest do
         [:compressed]
       )
 
-      assert {:error, :invalid_signature} = Loader.load(license_path)
+      capture_log(fn ->
+        assert {:error, :invalid_signature} = Loader.load(license_path)
+      end)
     end
 
     test "rejects license signed with wrong key", %{tmp_dir: tmp_dir} do
@@ -201,7 +207,9 @@ defmodule Zaq.License.IntegrationTest do
         [:compressed]
       )
 
-      assert {:error, :invalid_signature} = Loader.load(license_path)
+      capture_log(fn ->
+        assert {:error, :invalid_signature} = Loader.load(license_path)
+      end)
     end
   end
 end
