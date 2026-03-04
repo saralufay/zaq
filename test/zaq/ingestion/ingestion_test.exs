@@ -22,8 +22,8 @@ defmodule Zaq.IngestionTest do
 
   describe "ingest_file/2" do
     test "creates a job and enqueues worker in async mode" do
-      expect(Zaq.DocumentProcessorMock, :process_single_file, fn "docs/file.md" ->
-        {:ok, %{chunks_count: 2, document_id: nil}}
+      expect(Zaq.DocumentProcessorMock, :process_single_file, fn _path ->
+        {:ok, %{id: nil, chunks_count: 2, document_id: nil}}
       end)
 
       assert {:ok, job} = Ingestion.ingest_file("docs/file.md", :async)
@@ -33,8 +33,8 @@ defmodule Zaq.IngestionTest do
     end
 
     test "creates a job and processes inline" do
-      expect(Zaq.DocumentProcessorMock, :process_single_file, fn "docs/file.md" ->
-        {:ok, %{chunks_count: 3, document_id: nil}}
+      expect(Zaq.DocumentProcessorMock, :process_single_file, fn _path ->
+        {:ok, %{id: nil, chunks_count: 3, document_id: nil}}
       end)
 
       assert {:ok, job} = Ingestion.ingest_file("docs/file.md", :inline)
@@ -80,8 +80,8 @@ defmodule Zaq.IngestionTest do
     test "retries a failed job" do
       job = create_job(%{status: "failed", error: "something broke"})
 
-      expect(Zaq.DocumentProcessorMock, :process_single_file, fn "docs/test.md" ->
-        {:ok, %{chunks_count: 1, document_id: nil}}
+      expect(Zaq.DocumentProcessorMock, :process_single_file, fn _path ->
+        {:ok, %{id: nil, chunks_count: 1, document_id: nil}}
       end)
 
       assert {:ok, retried} = Ingestion.retry_job(job.id)

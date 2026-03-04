@@ -49,7 +49,7 @@ defmodule Zaq.Ingestion.IngestJobTest do
         started_at: now,
         completed_at: now,
         chunks_count: 42,
-        document_id: Ecto.UUID.generate()
+        document_id: 1
       }
 
       changeset = IngestJob.changeset(%IngestJob{}, attrs)

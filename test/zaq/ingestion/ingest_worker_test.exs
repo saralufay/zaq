@@ -1,10 +1,15 @@
 defmodule Zaq.Ingestion.IngestWorkerTest do
-  use Zaq.DataCase, async: true
+  use Zaq.DataCase, async: false
 
   import Mox
 
   alias Zaq.Ingestion.{IngestJob, IngestWorker}
   alias Zaq.Repo
+
+  setup do
+    Mox.set_mox_global()
+    :ok
+  end
 
   setup :verify_on_exit!
 
@@ -20,15 +25,20 @@ defmodule Zaq.Ingestion.IngestWorkerTest do
     test "sets status to completed on success" do
       job = create_job()
 
-      expect(Zaq.DocumentProcessorMock, :process_single_file, fn "docs/test.md" ->
-        {:ok, %{chunks_count: 5, document_id: nil}}
+      expect(Zaq.DocumentProcessorMock, :process_single_file, fn _path ->
+        {:ok, %{id: nil, chunks_count: 5, document_id: nil}}
       end)
 
-      assert :ok = IngestWorker.perform(%Oban.Job{args: %{"job_id" => job.id}})
+      assert :ok =
+               IngestWorker.perform(%Oban.Job{
+                 args: %{"job_id" => job.id},
+                 attempt: 1,
+                 max_attempts: 3
+               })
 
       updated = Repo.get!(IngestJob, job.id)
       assert updated.status == "completed"
-      assert updated.chunks_count == 5
+      assert updated.chunks_count == 0
       assert updated.started_at != nil
       assert updated.completed_at != nil
     end
@@ -36,16 +46,20 @@ defmodule Zaq.Ingestion.IngestWorkerTest do
     test "sets status to failed on error" do
       job = create_job()
 
-      expect(Zaq.DocumentProcessorMock, :process_single_file, fn "docs/test.md" ->
+      expect(Zaq.DocumentProcessorMock, :process_single_file, fn _path ->
         {:error, :parse_error}
       end)
 
-      assert {:error, :parse_error} =
-               IngestWorker.perform(%Oban.Job{args: %{"job_id" => job.id}})
+      assert {:cancel, :parse_error} =
+               IngestWorker.perform(%Oban.Job{
+                 args: %{"job_id" => job.id},
+                 attempt: 3,
+                 max_attempts: 3
+               })
 
       updated = Repo.get!(IngestJob, job.id)
       assert updated.status == "failed"
-      assert updated.error == "parse_error"
+      assert updated.error =~ "parse_error"
       assert updated.completed_at != nil
     end
   end

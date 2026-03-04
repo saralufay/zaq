@@ -29,8 +29,8 @@ defmodule Zaq.Ingestion.IngestWorker do
         |> IngestJob.changeset(%{
           status: "completed",
           completed_at: DateTime.utc_now(),
-          chunks_count: count_chunks(document.id),
-          document_id: document.id
+          chunks_count: count_chunks(document[:id]),
+          document_id: document[:id]
         })
         |> Repo.update!()
         |> broadcast_update()
@@ -91,6 +91,8 @@ defmodule Zaq.Ingestion.IngestWorker do
       _ -> path
     end
   end
+
+  defp count_chunks(nil), do: 0
 
   defp count_chunks(document_id) do
     Repo.aggregate(

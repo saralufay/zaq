@@ -42,7 +42,11 @@ defmodule ZaqWeb.Live.BO.IngestionLive do
      )}
   end
 
-  # --- File Browser ---
+  # ────────────────────────────────────────────────────────────────
+  # handle_event/3 — all clauses grouped together
+  # ────────────────────────────────────────────────────────────────
+
+  # File Browser
 
   def handle_event("navigate", %{"path" => path}, socket) do
     {:noreply,
@@ -53,17 +57,7 @@ defmodule ZaqWeb.Live.BO.IngestionLive do
   end
 
   def handle_event("go_back", _params, socket) do
-    current = socket.assigns.current_dir
-
-    parent =
-      if current == "." do
-        "."
-      else
-        case Path.dirname(current) do
-          "." -> "."
-          parent -> parent
-        end
-      end
+    parent = parent_dir(socket.assigns.current_dir)
 
     {:noreply,
      socket
@@ -95,13 +89,13 @@ defmodule ZaqWeb.Live.BO.IngestionLive do
     {:noreply, assign(socket, selected: selected)}
   end
 
-  # --- View Mode ---
+  # View Mode
 
   def handle_event("toggle_view_mode", %{"mode" => mode}, socket) when mode in ~w(list grid) do
     {:noreply, assign(socket, view_mode: mode)}
   end
 
-  # --- Modal: New Folder ---
+  # Modal: New Folder
 
   def handle_event("show_new_folder_modal", _params, socket) do
     {:noreply, assign(socket, modal: :new_folder, modal_name: "", modal_error: nil)}
@@ -129,7 +123,7 @@ defmodule ZaqWeb.Live.BO.IngestionLive do
     end
   end
 
-  # --- Modal: Rename ---
+  # Modal: Rename
 
   def handle_event("rename_item", %{"path" => path, "type" => type}, socket) do
     {:noreply,
@@ -159,21 +153,7 @@ defmodule ZaqWeb.Live.BO.IngestionLive do
     end
   end
 
-  defp do_rename(socket, old_path, new_path, new_name) do
-    case FileExplorer.rename(old_path, new_path) do
-      :ok ->
-        {:noreply,
-         socket
-         |> assign(modal: nil, selected: MapSet.new(), modal_error: nil)
-         |> load_entries()
-         |> put_flash(:info, "Renamed to \"#{new_name}\".")}
-
-      {:error, reason} ->
-        {:noreply, assign(socket, modal_error: "Rename failed: #{inspect(reason)}")}
-    end
-  end
-
-  # --- Modal: Delete single item ---
+  # Modal: Delete single item
 
   def handle_event("delete_item", %{"path" => path, "type" => type}, socket) do
     {:noreply,
@@ -187,13 +167,7 @@ defmodule ZaqWeb.Live.BO.IngestionLive do
   end
 
   def handle_event("confirm_delete", _params, socket) do
-    path = socket.assigns.modal_path
-
-    result =
-      case socket.assigns.modal_type do
-        "directory" -> FileExplorer.delete_directory(path)
-        _ -> FileExplorer.delete(path)
-      end
+    result = do_delete(socket.assigns.modal_path, socket.assigns.modal_type)
 
     case result do
       :ok ->
@@ -208,7 +182,7 @@ defmodule ZaqWeb.Live.BO.IngestionLive do
     end
   end
 
-  # --- Modal: Bulk delete ---
+  # Modal: Bulk delete
 
   def handle_event("show_delete_confirmation", _params, socket) do
     {:noreply, assign(socket, modal: :delete_selected, modal_error: nil)}
@@ -242,7 +216,7 @@ defmodule ZaqWeb.Live.BO.IngestionLive do
     {:noreply, socket}
   end
 
-  # --- Modal: Move item ---
+  # Modal: Move item
 
   def handle_event("move_item", %{"path" => path, "type" => type}, socket) do
     {:noreply,
@@ -268,17 +242,7 @@ defmodule ZaqWeb.Live.BO.IngestionLive do
   end
 
   def handle_event("move_go_back", _params, socket) do
-    current = socket.assigns.move_current_dir
-
-    parent =
-      if current == "." do
-        "."
-      else
-        case Path.dirname(current) do
-          "." -> "."
-          parent -> parent
-        end
-      end
+    parent = parent_dir(socket.assigns.move_current_dir)
 
     {:noreply,
      socket
@@ -293,7 +257,6 @@ defmodule ZaqWeb.Live.BO.IngestionLive do
     name = Path.basename(source)
     dest = Path.join(dest_dir, name)
 
-    # Prevent moving into itself or same location
     cond do
       Path.dirname(source) == dest_dir ->
         {:noreply, assign(socket, modal_error: "Already in this folder.")}
@@ -302,30 +265,17 @@ defmodule ZaqWeb.Live.BO.IngestionLive do
         {:noreply, assign(socket, modal_error: "Cannot move a folder into itself.")}
 
       true ->
-        case FileExplorer.rename(source, dest) do
-          :ok ->
-            {:noreply,
-             socket
-             |> assign(modal: nil, selected: MapSet.new(), modal_error: nil)
-             |> load_entries()
-             |> put_flash(
-               :info,
-               "Moved \"#{name}\" to #{if dest_dir == ".", do: "root", else: dest_dir}."
-             )}
-
-          {:error, reason} ->
-            {:noreply, assign(socket, modal_error: "Move failed: #{inspect(reason)}")}
-        end
+        do_move(socket, source, dest, name, dest_dir)
     end
   end
 
-  # --- Modal: Close ---
+  # Modal: Close
 
   def handle_event("close_modal", _params, socket) do
     {:noreply, assign(socket, modal: nil, modal_error: nil)}
   end
 
-  # --- Ingestion ---
+  # Ingestion
 
   def handle_event("set_mode", %{"mode" => mode}, socket) do
     {:noreply, assign(socket, ingest_mode: mode)}
@@ -335,8 +285,6 @@ defmodule ZaqWeb.Live.BO.IngestionLive do
     mode = String.to_existing_atom(socket.assigns.ingest_mode)
 
     for path <- socket.assigns.selected do
-      _entry_full = Path.join(socket.assigns.current_dir, "")
-
       case FileExplorer.file_info(path) do
         {:ok, %{type: :directory}} -> Ingestion.ingest_folder(path, mode)
         {:ok, %{type: :file}} -> Ingestion.ingest_file(path, mode)
@@ -372,7 +320,7 @@ defmodule ZaqWeb.Live.BO.IngestionLive do
      |> load_jobs()}
   end
 
-  # --- Upload ---
+  # Upload
 
   def handle_event("validate_upload", _params, socket), do: {:noreply, socket}
 
@@ -390,13 +338,60 @@ defmodule ZaqWeb.Live.BO.IngestionLive do
      |> put_flash(:info, "#{length(uploaded)} file(s) uploaded.")}
   end
 
-  # --- PubSub ---
+  # ────────────────────────────────────────────────────────────────
+  # handle_info/2
+  # ────────────────────────────────────────────────────────────────
 
   def handle_info({:job_updated, _job}, socket) do
     {:noreply, load_jobs(socket)}
   end
 
-  # --- Private ---
+  # ────────────────────────────────────────────────────────────────
+  # Private helpers
+  # ────────────────────────────────────────────────────────────────
+
+  defp parent_dir("."), do: "."
+
+  defp parent_dir(path) do
+    case Path.dirname(path) do
+      "." -> "."
+      parent -> parent
+    end
+  end
+
+  defp do_rename(socket, old_path, new_path, new_name) do
+    case FileExplorer.rename(old_path, new_path) do
+      :ok ->
+        {:noreply,
+         socket
+         |> assign(modal: nil, selected: MapSet.new(), modal_error: nil)
+         |> load_entries()
+         |> put_flash(:info, "Renamed to \"#{new_name}\".")}
+
+      {:error, reason} ->
+        {:noreply, assign(socket, modal_error: "Rename failed: #{inspect(reason)}")}
+    end
+  end
+
+  defp do_delete(path, "directory"), do: FileExplorer.delete_directory(path)
+  defp do_delete(path, _type), do: FileExplorer.delete(path)
+
+  defp do_move(socket, source, dest, name, dest_dir) do
+    case FileExplorer.rename(source, dest) do
+      :ok ->
+        {:noreply,
+         socket
+         |> assign(modal: nil, selected: MapSet.new(), modal_error: nil)
+         |> load_entries()
+         |> put_flash(
+           :info,
+           "Moved \"#{name}\" to #{if dest_dir == ".", do: "root", else: dest_dir}."
+         )}
+
+      {:error, reason} ->
+        {:noreply, assign(socket, modal_error: "Move failed: #{inspect(reason)}")}
+    end
+  end
 
   defp load_entries(socket) do
     case FileExplorer.list(socket.assigns.current_dir) do
@@ -436,8 +431,6 @@ defmodule ZaqWeb.Live.BO.IngestionLive do
     assign(socket, breadcrumbs: crumbs)
   end
 
-  # --- Helpers used in template ---
-
   defp load_move_folders(socket, dir) do
     moving_path = socket.assigns.modal_path
 
@@ -471,6 +464,10 @@ defmodule ZaqWeb.Live.BO.IngestionLive do
 
     assign(socket, move_breadcrumbs: crumbs)
   end
+
+  # ────────────────────────────────────────────────────────────────
+  # Template helpers (public for HEEx)
+  # ────────────────────────────────────────────────────────────────
 
   def format_size(bytes) when bytes < 1024, do: "#{bytes} B"
   def format_size(bytes) when bytes < 1_048_576, do: "#{Float.round(bytes / 1024, 1)} KB"
