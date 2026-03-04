@@ -71,7 +71,8 @@ defmodule Zaq.MixProject do
       {:pgvector, "~> 0.3.1"},
       {:langchain, github: "Geeks-Solutions/langchain", branch: "main"},
       {:mox, "~> 1.2", only: :test},
-      {:oban, "~> 2.20.3"}
+      {:oban, "~> 2.20.3"},
+      {:file_system, "~> 1.1"}
     ]
   end
 
