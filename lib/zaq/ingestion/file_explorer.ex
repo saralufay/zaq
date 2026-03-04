@@ -84,4 +84,46 @@ defmodule Zaq.Ingestion.FileExplorer do
       {:ok, full_path}
     end
   end
+
+  @doc """
+  Deletes a single file relative to base path.
+  """
+  def delete(relative_path) do
+    with {:ok, full_path} <- resolve_path(relative_path) do
+      File.rm(full_path)
+    end
+  end
+
+  @doc """
+  Recursively deletes a directory and all its contents relative to base path.
+  """
+  def delete_directory(relative_path) do
+    with {:ok, full_path} <- resolve_path(relative_path),
+         true <- File.dir?(full_path) do
+      File.rm_rf(full_path)
+      :ok
+    else
+      false -> {:error, :not_a_directory}
+      error -> error
+    end
+  end
+
+  @doc """
+  Renames (moves) a file or directory. Both paths are relative to base path.
+  """
+  def rename(old_relative, new_relative) do
+    with {:ok, old_full} <- resolve_path(old_relative),
+         {:ok, new_full} <- resolve_path(new_relative) do
+      File.rename(old_full, new_full)
+    end
+  end
+
+  @doc """
+  Creates a directory (including parents) relative to base path.
+  """
+  def create_directory(relative_path) do
+    with {:ok, full_path} <- resolve_path(relative_path) do
+      File.mkdir_p(full_path)
+    end
+  end
 end

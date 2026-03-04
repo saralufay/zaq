@@ -4,8 +4,8 @@ defmodule Zaq.Ingestion do
   query job statuses, retry and cancel jobs.
   """
 
-alias Zaq.Ingestion.{FileExplorer, IngestJob, IngestWorker}
-alias Zaq.Repo
+  alias Zaq.Ingestion.{FileExplorer, IngestJob, IngestWorker}
+  alias Zaq.Repo
 
   import Ecto.Query
 
