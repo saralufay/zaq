@@ -47,6 +47,9 @@ config :esbuild,
 
 config :license_manager, :repo, Zaq.Repo
 
+config :zaq,
+  license_dir: "priv/licenses"
+
 # Configure tailwind (the version is required)
 config :tailwind,
   version: "4.1.12",
