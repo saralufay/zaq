@@ -1,9 +1,12 @@
 <div class="min-h-screen flex items-center justify-center bg-[#F8FAFC]">
-  <div class="absolute inset-0 z-0 opacity-[0.03] pointer-events-none" style="background-image: radial-gradient(#2D3E50 1px, transparent 1px); background-size: 24px 24px;"></div>
+  <div
+    class="absolute inset-0 z-0 opacity-[0.03] pointer-events-none"
+    style="background-image: radial-gradient(#2D3E50 1px, transparent 1px); background-size: 24px 24px;"
+  >
+  </div>
 
   <div class="w-full max-w-[400px] mx-6 z-10">
     <div class="bg-white rounded-2xl shadow-[0_20px_50px_rgba(45,62,80,0.1)] border border-slate-100 overflow-hidden">
-      
       <div class="bg-[#2D3E50] p-8 text-center">
         <div class="inline-flex items-center justify-center w-16 h-16 rounded-2xl bg-white/10 mb-4 backdrop-blur-sm">
           <img src={~p"/images/zaq.png"} alt="ZAQ" class="w-10 h-auto " />
@@ -11,52 +14,73 @@
         <h1 class="text-white text-xl font-bold tracking-tight uppercase">
           ZAQ <span class="text-cyan-400">Back Office</span>
         </h1>
-        <p class="text-[10px] font-bold text-slate-400 uppercase tracking-[0.2em] mt-2">Authorization Required</p>
+        <p class="text-[10px] font-bold text-slate-400 uppercase tracking-[0.2em] mt-2">
+          Authorization Required
+        </p>
       </div>
 
       <div class="p-8 md:p-10">
-        <div :if={Phoenix.Flash.get(@flash, :error)} class="mb-6 flex items-center gap-3 p-4 rounded-xl bg-red-50 border border-red-100 text-red-600 text-xs animate-shake">
+        <div
+          :if={Phoenix.Flash.get(@flash, :error)}
+          class="mb-6 flex items-center gap-3 p-4 rounded-xl bg-red-50 border border-red-100 text-red-600 text-xs animate-shake"
+        >
           <div class="w-1.5 h-1.5 rounded-full bg-red-500"></div>
           <p class="font-bold uppercase tracking-wider">{Phoenix.Flash.get(@flash, :error)}</p>
         </div>
 
-        <.form for={@form} action={~p"/bo/session"} method="post" phx-change="validate" class="space-y-5">
+        <.form
+          for={@form}
+          action={~p"/bo/session"}
+          method="post"
+          phx-change="validate"
+          class="space-y-5"
+        >
           <div class="space-y-1">
-            <label class="text-[10px] font-bold text-slate-400 uppercase tracking-wider ml-1">Username</label>
+            <label class="text-[10px] font-bold text-slate-400 uppercase tracking-wider ml-1">
+              Username
+            </label>
             <div class="relative group">
-              <input 
-                type="text" 
-                name="username" 
-                value={@form[:username].value} 
-                required 
+              <input
+                type="text"
+                name="username"
+                value={@form[:username].value}
+                required
                 placeholder="e.g. admin_user"
-                class="block w-full bg-slate-50 border border-slate-200 rounded-xl px-4 py-3.5 text-slate-700 placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-cyan-500/20 focus:border-cyan-500 transition-all text-sm" 
+                class="block w-full bg-slate-50 border border-slate-200 rounded-xl px-4 py-3.5 text-slate-700 placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-cyan-500/20 focus:border-cyan-500 transition-all text-sm"
               />
             </div>
           </div>
 
           <div class="space-y-1">
-            <label class="text-[10px] font-bold text-slate-400 uppercase tracking-wider ml-1">Password</label>
+            <label class="text-[10px] font-bold text-slate-400 uppercase tracking-wider ml-1">
+              Password
+            </label>
             <div class="relative group">
-              <input 
-                type="password" 
-                name="password" 
-                value={@form[:password].value} 
-                required 
+              <input
+                type="password"
+                name="password"
+                value={@form[:password].value}
+                required
                 placeholder="••••••••"
-                class="block w-full bg-slate-50 border border-slate-200 rounded-xl px-4 py-3.5 text-slate-700 placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-cyan-500/20 focus:border-cyan-500 transition-all text-sm" 
+                class="block w-full bg-slate-50 border border-slate-200 rounded-xl px-4 py-3.5 text-slate-700 placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-cyan-500/20 focus:border-cyan-500 transition-all text-sm"
               />
             </div>
           </div>
 
           <div class="flex items-center justify-between text-[11px] font-bold">
             <label class="flex items-center cursor-pointer text-slate-500 hover:text-[#2D3E50] transition-colors">
-              <input type="checkbox" name="remember" class="mr-2 w-4 h-4 rounded border-slate-300 text-cyan-500 focus:ring-cyan-500/20" />
-              KEEP ME LOGGED IN
+              <input
+                type="checkbox"
+                name="remember"
+                class="mr-2 w-4 h-4 rounded border-slate-300 text-cyan-500 focus:ring-cyan-500/20"
+              /> KEEP ME LOGGED IN
             </label>
           </div>
 
-          <button type="submit" class="w-full bg-cyan-500 hover:bg-cyan-600 text-white font-bold uppercase tracking-widest text-xs py-4 rounded-xl shadow-lg shadow-cyan-500/30 transition-all active:scale-[0.98]">
+          <button
+            type="submit"
+            class="w-full bg-cyan-500 hover:bg-cyan-600 text-white font-bold uppercase tracking-widest text-xs py-4 rounded-xl shadow-lg shadow-cyan-500/30 transition-all active:scale-[0.98]"
+          >
             Sign In to Dashboard
           </button>
         </.form>
@@ -65,7 +89,8 @@
 
     <div class="mt-8 text-center">
       <p class="text-[10px] text-slate-400 font-bold tracking-widest uppercase">
-        ZAQ Back Office &copy; {Date.utc_today().year} | <a href="https://zaq.ai" target="_blank" class="text-cyan-500 hover:underline">zaq.ai</a>
+        ZAQ Back Office &copy; {Date.utc_today().year} |
+        <a href="https://zaq.ai" target="_blank" class="text-cyan-500 hover:underline">zaq.ai</a>
       </p>
     </div>
   </div>

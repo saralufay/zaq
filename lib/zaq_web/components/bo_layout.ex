@@ -24,7 +24,7 @@ defmodule ZaqWeb.Components.BOLayout do
             Back Office
           </span>
         </div>
-
+        
     <!-- Nav -->
         <nav class="flex-1 py-4 px-3 space-y-1 overflow-y-auto">
           <.nav_item
@@ -33,7 +33,7 @@ defmodule ZaqWeb.Components.BOLayout do
             label="Dashboard"
             active={@current_path == "/bo/dashboard"}
           />
-
+          
     <!-- Accounts -->
           <div class="pt-4">
             <p class="font-mono text-[0.6rem] text-white/30 uppercase tracking-widest px-3 mb-2">
@@ -52,7 +52,7 @@ defmodule ZaqWeb.Components.BOLayout do
               active={String.starts_with?(@current_path, "/bo/roles")}
             />
           </div>
-
+          
     <!-- AI -->
           <div class="pt-4">
             <p class="font-mono text-[0.6rem] text-white/30 uppercase tracking-widest px-3 mb-2">
@@ -84,7 +84,7 @@ defmodule ZaqWeb.Components.BOLayout do
               active={String.starts_with?(@current_path, "/bo/ontology")}
             />
           </div>
-
+          
     <!-- System -->
           <div class="pt-4">
             <p class="font-mono text-[0.6rem] text-white/30 uppercase tracking-widest px-3 mb-2">
@@ -98,7 +98,7 @@ defmodule ZaqWeb.Components.BOLayout do
             />
           </div>
         </nav>
-
+        
     <!-- User / Logout -->
         <div class="border-t border-white/10 p-4">
           <div class="flex items-center gap-3 mb-3">
@@ -122,14 +122,14 @@ defmodule ZaqWeb.Components.BOLayout do
           </form>
         </div>
       </aside>
-
+      
     <!-- Main -->
       <main class="ml-[240px] flex-1">
         <!-- Header -->
         <header class="h-16 bg-white border-b border-black/10 flex items-center px-8">
           <h1 class="font-mono text-lg font-bold text-black">{@page_title}</h1>
         </header>
-
+        
     <!-- Content -->
         <div class="p-8">
           {render_slot(@inner_block)}
