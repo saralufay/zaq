@@ -201,12 +201,23 @@ const OntologyTree = {
       return group;
     }
 
-    // Build tree from data (handle array of businesses)
-    const treeData = Array.isArray(data)
-      ? { name: "ZAQ", type: "business", children: data }
-      : data;
-
-    treeEl.appendChild(buildNode(treeData));
+    // FIX 1: Handle array of businesses without duplicating a root node.
+    // If it's a single business, render it directly as the root.
+    // If multiple businesses, render each one side by side.
+    if (Array.isArray(data)) {
+      if (data.length === 1) {
+        treeEl.appendChild(buildNode(data[0]));
+      } else {
+        const row = document.createElement("div");
+        row.style.cssText = "display:flex; gap:2rem; position:relative;";
+        data.forEach((biz) => {
+          row.appendChild(buildNode(biz));
+        });
+        treeEl.appendChild(row);
+      }
+    } else {
+      treeEl.appendChild(buildNode(data));
+    }
 
     wrapper.appendChild(svgEl);
     wrapper.appendChild(treeEl);
@@ -275,7 +286,11 @@ const OntologyTree = {
       wrapper.querySelectorAll("[data-type]").forEach((group) => {
         const parentNode = group.children[0]; // first child is the node card
         const childrenRow = group.children[1]; // second child is the children row
-        if (!parentNode || !childrenRow || childrenRow.style.display === "flex" === false) return;
+
+        // FIX 2: Proper check — ensure both elements exist and the children row
+        // is a flex container with actual child groups inside it.
+        if (!parentNode || !childrenRow) return;
+        if (childrenRow.style.display !== "flex") return;
 
         const childGroups = childrenRow.children;
         if (!childGroups || childGroups.length === 0) return;
