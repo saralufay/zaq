@@ -1,4 +1,4 @@
-defmodule ZaqWeb.Live.BO.IngestionLive do
+defmodule ZaqWeb.Live.BO.AI.IngestionLive do
   use ZaqWeb, :live_view
 
   alias Zaq.Ingestion

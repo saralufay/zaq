@@ -1,6 +1,4 @@
-# test/zaq_web/live/bo/roles_live_test.exs
-
-defmodule ZaqWeb.Live.BO.RolesLiveTest do
+defmodule ZaqWeb.Live.BO.Accounts.RolesLiveTest do
   use ZaqWeb.ConnCase
 
   import Phoenix.LiveViewTest

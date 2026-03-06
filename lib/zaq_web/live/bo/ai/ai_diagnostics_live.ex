@@ -1,4 +1,4 @@
-defmodule ZaqWeb.Live.BO.AIDiagnosticsLive do
+defmodule ZaqWeb.Live.BO.AI.AIDiagnosticsLive do
   use ZaqWeb, :live_view
 
   alias Zaq.Agent.{LLM, PromptTemplate, TokenEstimator}

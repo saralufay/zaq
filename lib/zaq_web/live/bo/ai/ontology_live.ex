@@ -1,4 +1,4 @@
-defmodule ZaqWeb.Live.BO.OntologyLive do
+defmodule ZaqWeb.Live.BO.AI.OntologyLive do
   @moduledoc """
   BackOffice LiveView for the Ontology feature.
 

@@ -1,4 +1,4 @@
-# defmodule ZaqWeb.Live.BO.OntologyLiveTest do
+# defmodule ZaqWeb.Live.BO.AI.OntologyLiveTest do
 #   @moduledoc """
 #   Tests for the BackOffice Ontology LiveView.
 

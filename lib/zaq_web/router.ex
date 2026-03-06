@@ -48,18 +48,18 @@ defmodule ZaqWeb.Router do
 
     live_session :bo, on_mount: {ZaqWeb.Live.BO.AuthHook, :default} do
       live "/dashboard", Live.BO.DashboardLive
-      live "/change-password", Live.BO.ChangePasswordLive
-      live "/users", Live.BO.UsersLive
-      live "/users/new", Live.BO.UserFormLive, :new
-      live "/users/:id/edit", Live.BO.UserFormLive, :edit
-      live "/roles", Live.BO.RolesLive
-      live "/roles/new", Live.BO.RoleFormLive, :new
-      live "/roles/:id/edit", Live.BO.RoleFormLive, :edit
-      live "/license", Live.BO.LicenseLive
-      live "/ai-diagnostics", Live.BO.AIDiagnosticsLive
-      live "/prompt-templates", Live.BO.PromptTemplatesLive
-      live "/ingestion", Live.BO.IngestionLive
-      live "/ontology", Live.BO.OntologyLive
+      live "/change-password", Live.Bo.System.ChangePasswordLive
+      live "/users", Live.BO.Accounts.UsersLive
+      live "/users/new", Live.BO.Accounts.UserFormLive, :new
+      live "/users/:id/edit", Live.BO.Accounts.UserFormLive, :edit
+      live "/roles", Live.BO.Accounts.RolesLive
+      live "/roles/new", Live.BO.Accounts.RoleFormLive, :new
+      live "/roles/:id/edit", Live.BO.Accounts.RoleFormLive, :edit
+      live "/license", Live.Bo.System.LicenseLive
+      live "/ai-diagnostics", Live.BO.AI.AIDiagnosticsLive
+      live "/prompt-templates", Live.BO.AI.PromptTemplatesLive
+      live "/ingestion", Live.BO.AI.IngestionLive
+      live "/ontology", Live.BO.AI.OntologyLive
     end
   end
 

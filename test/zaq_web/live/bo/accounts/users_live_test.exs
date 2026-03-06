@@ -1,6 +1,4 @@
-# test/zaq_web/live/bo/users_live_test.exs
-
-defmodule ZaqWeb.Live.BO.UsersLiveTest do
+defmodule ZaqWeb.Live.BO.Accounts.UsersLiveTest do
   use ZaqWeb.ConnCase
 
   import Phoenix.LiveViewTest

@@ -1,4 +1,4 @@
-defmodule ZaqWeb.Live.BO.LicenseLiveTest do
+defmodule ZaqWeb.Live.BO.System.LicenseLiveTest do
   use ZaqWeb.ConnCase
 
   import Phoenix.LiveViewTest

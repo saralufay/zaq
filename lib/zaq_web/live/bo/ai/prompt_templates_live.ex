@@ -1,6 +1,4 @@
-# lib/zaq_web/live/bo/prompt_templates_live.ex
-
-defmodule ZaqWeb.Live.BO.PromptTemplatesLive do
+defmodule ZaqWeb.Live.BO.AI.PromptTemplatesLive do
   use ZaqWeb, :live_view
 
   alias Zaq.Agent.PromptTemplate

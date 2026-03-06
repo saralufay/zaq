@@ -1,6 +1,4 @@
-# lib/zaq_web/live/bo/role_form_live.ex
-
-defmodule ZaqWeb.Live.BO.RoleFormLive do
+defmodule ZaqWeb.Live.BO.Accounts.RoleFormLive do
   use ZaqWeb, :live_view
 
   alias Zaq.Accounts
