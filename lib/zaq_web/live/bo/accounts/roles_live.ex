@@ -1,4 +1,4 @@
-  defmodule ZaqWeb.Live.BO.Accounts.RolesLive do
+defmodule ZaqWeb.Live.BO.Accounts.RolesLive do
   use ZaqWeb, :live_view
 
   alias Zaq.Accounts
