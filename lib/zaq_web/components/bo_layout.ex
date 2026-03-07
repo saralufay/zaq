@@ -24,7 +24,7 @@ defmodule ZaqWeb.Components.BOLayout do
             Back Office
           </span>
         </div>
-        
+
     <!-- Nav -->
         <nav class="flex-1 py-4 px-3 space-y-1 overflow-y-auto">
           <.nav_item
@@ -33,26 +33,7 @@ defmodule ZaqWeb.Components.BOLayout do
             label="Dashboard"
             active={@current_path == "/bo/dashboard"}
           />
-          
-    <!-- Accounts -->
-          <div class="pt-4">
-            <p class="font-mono text-[0.6rem] text-white/30 uppercase tracking-widest px-3 mb-2">
-              Accounts
-            </p>
-            <.nav_item
-              href={~p"/bo/users"}
-              icon="users"
-              label="Users"
-              active={String.starts_with?(@current_path, "/bo/users")}
-            />
-            <.nav_item
-              href={~p"/bo/roles"}
-              icon="roles"
-              label="Roles"
-              active={String.starts_with?(@current_path, "/bo/roles")}
-            />
-          </div>
-          
+
     <!-- AI -->
           <div class="pt-4">
             <p class="font-mono text-[0.6rem] text-white/30 uppercase tracking-widest px-3 mb-2">
@@ -84,8 +65,61 @@ defmodule ZaqWeb.Components.BOLayout do
               active={String.starts_with?(@current_path, "/bo/ontology")}
             />
           </div>
-          
-    <!-- System -->
+          <!-- Communication -->
+          <div class="pt-4">
+            <p class="font-mono text-[0.6rem] text-white/30 uppercase tracking-widest px-3 mb-2">
+              Communication
+            </p>
+            <.nav_item
+              href={~p"/bo/channels"}
+              icon="channels"
+              label="Channels"
+              active={@current_path == "/bo/channels"}
+            />
+            <.nav_item
+              href={~p"/bo/playground"}
+              icon="playground"
+              label="Playground"
+              active={@current_path == "/bo/playground"}
+            />
+            <.nav_item
+              href={~p"/bo/history"}
+              icon="history"
+              label="History"
+              active={@current_path == "/bo/history"}
+            />
+          </div>
+          <!-- Widget -->
+          <div class="pt-4">
+            <p class="font-mono text-[0.6rem] text-white/30 uppercase tracking-widest px-3 mb-2">
+              Widget
+            </p>
+            <.nav_item
+              href={~p"/bo/widget-settings"}
+              icon="settings"
+              label="Settings"
+              active={@current_path == "/bo/widget-settings"}
+            />
+          </div>
+           <!-- Accounts -->
+          <div class="pt-4">
+            <p class="font-mono text-[0.6rem] text-white/30 uppercase tracking-widest px-3 mb-2">
+              Accounts
+            </p>
+            <.nav_item
+              href={~p"/bo/users"}
+              icon="users"
+              label="Users"
+              active={String.starts_with?(@current_path, "/bo/users")}
+            />
+            <.nav_item
+              href={~p"/bo/roles"}
+              icon="roles"
+              label="Roles"
+              active={String.starts_with?(@current_path, "/bo/roles")}
+            />
+          </div>
+          <!-- System -->
           <div class="pt-4">
             <p class="font-mono text-[0.6rem] text-white/30 uppercase tracking-widest px-3 mb-2">
               System
@@ -98,7 +132,7 @@ defmodule ZaqWeb.Components.BOLayout do
             />
           </div>
         </nav>
-        
+
     <!-- User / Logout -->
         <div class="border-t border-white/10 p-4">
           <div class="flex items-center gap-3 mb-3">
@@ -122,14 +156,14 @@ defmodule ZaqWeb.Components.BOLayout do
           </form>
         </div>
       </aside>
-      
+
     <!-- Main -->
       <main class="ml-[240px] flex-1">
         <!-- Header -->
         <header class="h-16 bg-white border-b border-black/10 flex items-center px-8">
           <h1 class="font-mono text-lg font-bold text-black">{@page_title}</h1>
         </header>
-        
+
     <!-- Content -->
         <div class="p-8">
           {render_slot(@inner_block)}
@@ -223,6 +257,56 @@ defmodule ZaqWeb.Components.BOLayout do
       >
         <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z" />
       </svg>
+
+      <svg
+        :if={@icon == "channels"}
+        class="w-[18px] h-[18px]"
+        fill="none"
+        stroke="currentColor"
+        stroke-width="1.8"
+        viewBox="0 0 24 24"
+      >
+        <path d="M3 6h18M3 12h18M3 18h18" />
+        <circle cx="8" cy="6" r="1.5" fill="currentColor" />
+        <circle cx="16" cy="12" r="1.5" fill="currentColor" />
+        <circle cx="12" cy="18" r="1.5" fill="currentColor" />
+      </svg>
+
+      <svg
+        :if={@icon == "settings"}
+        class="w-[18px] h-[18px]"
+        fill="none"
+        stroke="currentColor"
+        stroke-width="1.8"
+        viewBox="0 0 24 24"
+      >
+        <circle cx="12" cy="12" r="5" />
+        <path d="M12 3v3M12 18v3M3 12h3M18 12h3M5.6 5.6l2.1 2.1M16.3 16.3l2.1 2.1M16.3 7.7l2.1-2.1M5.6 18.4l2.1-2.1" />
+      </svg>
+
+      <svg
+        :if={@icon == "playground"}
+        class="w-[18px] h-[18px]"
+        fill="none"
+        stroke="currentColor"
+        stroke-width="1.8"
+        viewBox="0 0 24 24"
+      >
+        <polygon points="5 3 19 12 5 21 5 3" />
+      </svg>
+
+      <svg
+        :if={@icon == "history"}
+        class="w-[18px] h-[18px]"
+        fill="none"
+        stroke="currentColor"
+        stroke-width="1.8"
+        viewBox="0 0 24 24"
+      >
+        <circle cx="12" cy="12" r="10" />
+        <polyline points="12 6 12 12 16 14" />
+      </svg>
+
       <svg
         :if={@icon == "license"}
         class="w-[18px] h-[18px]"
