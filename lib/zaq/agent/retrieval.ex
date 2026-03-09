@@ -32,7 +32,7 @@ defmodule Zaq.Agent.Retrieval do
   def ask(question, opts \\ []) do
     system_prompt =
       Keyword.get_lazy(opts, :system_prompt, fn ->
-        PromptTemplate.get_active!("retrieval").body
+        PromptTemplate.get_active!("retrieval")
       end)
 
     history =

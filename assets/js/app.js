@@ -41,8 +41,31 @@ const liveSocket = new LiveSocket("/live", Socket, {
       updated() {
         this.el.focus()
       }
+    },
+    ScrollBottom: {
+      mounted() {
+        this.el.scrollTop = this.el.scrollHeight
+      },
+      updated() {
+        this.el.scrollTop = this.el.scrollHeight
+      }
+    },
+    FocusInput: {
+      mounted() {
+        this.el.focus()
+      },
+      updated() {
+        if (!this.el.disabled) this.el.focus()
+      }
     }
   },
+})
+
+// Clipboard copy via push_event
+window.addEventListener("phx:clipboard", (e) => {
+  if (e.detail && e.detail.text) {
+    navigator.clipboard.writeText(e.detail.text)
+  }
 })
 
 // Show progress bar on live navigation and form submits

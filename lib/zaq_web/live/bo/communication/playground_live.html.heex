@@ -3,24 +3,362 @@
   page_title="Playground"
   current_path={@current_path}
 >
-  <div class="flex items-center justify-center min-h-[60vh]">
-    <div class="text-center">
-      <div class="w-16 h-16 mx-auto mb-6 rounded-2xl bg-[#03b6d4]/10 grid place-items-center">
-        <svg
-          class="w-8 h-8 text-[#03b6d4]"
-          fill="none"
-          stroke="currentColor"
-          stroke-width="1.8"
-          viewBox="0 0 24 24"
-        >
-          <polygon points="5 3 19 12 5 21 5 3" />
-        </svg>
+  <style>
+    @keyframes slide-in-right {
+      from { opacity: 0; transform: translateY(6px); }
+      to { opacity: 1; transform: translateY(0); }
+    }
+    @keyframes slide-in-left {
+      from { opacity: 0; transform: translateY(6px); }
+      to { opacity: 1; transform: translateY(0); }
+    }
+    .animate-slide-in-right { animation: slide-in-right 0.25s ease-out; }
+    .animate-slide-in-left { animation: slide-in-left 0.25s ease-out; }
+    .chat-bubble-bot {
+      background: linear-gradient(135deg, #ffffff 0%, #f8fbfc 100%);
+    }
+  </style>
+
+  <div class="flex flex-col overflow-hidden -mx-8 -mb-8 -mt-8" style="height: calc(100vh - 56px);">
+    <%!-- Messages area --%>
+    <div
+      id="chat-messages"
+      phx-hook="ScrollBottom"
+      class="flex-1 min-h-0 overflow-y-auto bg-gradient-to-b from-slate-50/80 to-white"
+    >
+      <div class="max-w-4xl mx-auto px-5 py-5 space-y-4">
+        <%= for msg <- @messages do %>
+          <%= if msg.role == :user do %>
+            <%!-- User message --%>
+            <div class="flex justify-end animate-slide-in-right">
+              <div class="max-w-[72%]">
+                <div class="bg-[#03b6d4] text-white px-4 py-2.5 rounded-2xl rounded-br-sm shadow-sm shadow-[#03b6d4]/15">
+                  <p class="text-[0.84rem] leading-relaxed whitespace-pre-wrap">{msg.body}</p>
+                </div>
+                <div class="flex items-center justify-end gap-2 mt-1 pr-1">
+                  <span class="text-[0.6rem] text-gray-300">
+                    {Calendar.strftime(msg.timestamp, "%H:%M")}
+                  </span>
+                  <button
+                    phx-click="copy_message"
+                    phx-value-text={msg.body}
+                    class="text-gray-300 hover:text-gray-500 transition-all duration-200"
+                    title="Copy message"
+                  >
+                    <svg
+                      data-v-4a3cbe5b=""
+                      xmlns="http://www.w3.org/2000/svg"
+                      width="16"
+                      height="16"
+                      viewBox="0 0 24 24"
+                      fill="none"
+                      stroke="currentColor"
+                      stroke-width="2"
+                      stroke-linecap="round"
+                      stroke-linejoin="round"
+                    >
+                      <rect x="9" y="9" width="13" height="13" rx="2" ry="2"></rect>
+                      <path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"></path>
+                    </svg>
+                  </button>
+                </div>
+              </div>
+            </div>
+          <% else %>
+            <%!-- Bot message --%>
+            <div class="flex justify-start animate-slide-in-left">
+              <div class="flex gap-2.5 max-w-[82%]">
+                <div class="flex-shrink-0 mt-1">
+                  <img
+                    src={~p"/images/zaq.png"}
+                    alt="ZAQ"
+                    class="w-7 h-7 rounded-lg object-contain"
+                  />
+                </div>
+                <div class="flex-1 min-w-0">
+                  <div class={[
+                    "chat-bubble-bot px-4 py-2.5 rounded-2xl rounded-bl-sm border shadow-sm",
+                    if(msg[:error], do: "border-red-200 bg-red-50", else: "border-gray-100/80")
+                  ]}>
+                    <div class={[
+                      "text-[0.84rem] leading-relaxed [&>p]:mb-1.5 [&>p:last-child]:mb-0 [&>ul]:list-disc [&>ul]:pl-4 [&>ol]:list-decimal [&>ol]:pl-4",
+                      if(msg[:error], do: "text-red-600", else: "text-gray-700")
+                    ]}>
+                      {raw(msg.body)}
+                    </div>
+                  </div>
+                  <div class="flex items-center gap-2 mt-1 ml-1">
+                    <span class="text-[0.6rem] text-gray-300">
+                      {Calendar.strftime(msg.timestamp, "%H:%M")}
+                    </span>
+                    <%= if msg.confidence && msg.confidence > 0 do %>
+                      <div class="flex items-center gap-1">
+                        <div class={[
+                          "w-1.5 h-1.5 rounded-full",
+                          cond do
+                            msg.confidence >= 0.8 -> "bg-emerald-400"
+                            msg.confidence >= 0.5 -> "bg-amber-400"
+                            true -> "bg-red-400"
+                          end
+                        ]} />
+                        <span class="text-[0.6rem] text-gray-300">
+                          {Float.round(msg.confidence * 100, 0) |> trunc()}%
+                        </span>
+                      </div>
+                    <% end %>
+                    <%!-- Action buttons --%>
+                    <div class="flex items-center gap-1 ml-1">
+                      <button
+                        phx-click="copy_message"
+                        phx-value-text={msg.body}
+                        class="p-1 rounded-md text-gray-300 hover:text-gray-500 hover:bg-gray-100 transition-all"
+                        title="Copy response"
+                      >
+                        <svg
+                          data-v-4a3cbe5b=""
+                          xmlns="http://www.w3.org/2000/svg"
+                          width="16"
+                          height="16"
+                          viewBox="0 0 24 24"
+                          fill="none"
+                          stroke="currentColor"
+                          stroke-width="2"
+                          stroke-linecap="round"
+                          stroke-linejoin="round"
+                        >
+                          <rect x="9" y="9" width="13" height="13" rx="2" ry="2"></rect>
+                          <path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1">
+                          </path>
+                        </svg>
+                      </button>
+                      <button
+                        phx-click="feedback"
+                        phx-value-id={msg.id}
+                        phx-value-type="positive"
+                        class={[
+                          "p-1 rounded-md transition-all",
+                          if(msg[:feedback] == :positive,
+                            do: "text-emerald-500 bg-emerald-50",
+                            else: "text-gray-300 hover:text-emerald-500 hover:bg-emerald-50"
+                          )
+                        ]}
+                        title="Good response"
+                      >
+                        <svg
+                          data-v-4a3cbe5b=""
+                          xmlns="http://www.w3.org/2000/svg"
+                          width="16"
+                          height="16"
+                          viewBox="0 0 24 24"
+                          fill="none"
+                          stroke="currentColor"
+                          stroke-width="2"
+                          stroke-linecap="round"
+                          stroke-linejoin="round"
+                        >
+                          <path d="M14 9V5a3 3 0 0 0-3-3l-4 9v11h11.28a2 2 0 0 0 2-1.7l1.38-9a2 2 0 0 0-2-2.3zM7 22H4a2 2 0 0 1-2-2v-7a2 2 0 0 1 2-2h3">
+                          </path>
+                        </svg>
+                      </button>
+                      <button
+                        phx-click="feedback"
+                        phx-value-id={msg.id}
+                        phx-value-type="negative"
+                        class={[
+                          "p-1 rounded-md transition-all",
+                          if(msg[:feedback] == :negative,
+                            do: "text-red-500 bg-red-50",
+                            else: "text-gray-300 hover:text-red-500 hover:bg-red-50"
+                          )
+                        ]}
+                        title="Poor response"
+                      >
+                        <svg
+                          data-v-4a3cbe5b=""
+                          xmlns="http://www.w3.org/2000/svg"
+                          width="16"
+                          height="16"
+                          viewBox="0 0 24 24"
+                          fill="none"
+                          stroke="currentColor"
+                          stroke-width="2"
+                          stroke-linecap="round"
+                          stroke-linejoin="round"
+                        >
+                          <path d="M10 15v4a3 3 0 0 0 3 3l4-9V2H5.72a2 2 0 0 0-2 1.7l-1.38 9a2 2 0 0 0 2 2.3zm7-13h2.67A2.31 2.31 0 0 1 22 4v7a2.31 2.31 0 0 1-2.33 2H17">
+                          </path>
+                        </svg>
+                      </button>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+          <% end %>
+        <% end %>
+
+        <%!-- Thinking indicator --%>
+        <%= if @status in [:thinking, :retrieving, :answering] do %>
+          <div class="flex justify-start animate-slide-in-left">
+            <div class="flex gap-2.5">
+              <div class="flex-shrink-0 mt-1">
+                <img
+                  src={~p"/images/zaq.png"}
+                  alt="ZAQ"
+                  class="w-7 h-7 rounded-lg object-contain animate-pulse"
+                />
+              </div>
+              <div class="chat-bubble-bot px-4 py-2.5 border border-gray-100/80 rounded-2xl rounded-bl-sm shadow-sm">
+                <div class="flex items-center gap-2.5">
+                  <div class="flex gap-1">
+                    <span class="w-1.5 h-1.5 bg-[#03b6d4] rounded-full animate-bounce [animation-delay:0ms]">
+                    </span>
+                    <span class="w-1.5 h-1.5 bg-[#03b6d4] rounded-full animate-bounce [animation-delay:150ms]">
+                    </span>
+                    <span class="w-1.5 h-1.5 bg-[#03b6d4] rounded-full animate-bounce [animation-delay:300ms]">
+                    </span>
+                  </div>
+                  <span class="text-[0.8rem] text-gray-400">{@status_message}</span>
+                </div>
+              </div>
+            </div>
+          </div>
+        <% end %>
       </div>
-      <h2 class="font-mono text-xl font-bold text-black mb-2">Playground</h2>
-      <p class="font-mono text-sm text-black/40 mb-4">Coming Soon</p>
-      <p class="font-mono text-[0.78rem] text-black/30 max-w-sm">
-        Test and experiment with your AI assistant in real time before going live.
-      </p>
+    </div>
+
+    <%!-- Input area — pinned to bottom, no gap --%>
+    <div class="flex-shrink-0 border-t border-gray-200/60 bg-white px-5 py-2.5">
+      <div class="max-w-4xl mx-auto">
+        <form phx-submit="send_message" class="flex gap-2 items-center">
+          <div class="flex-1">
+            <input
+              type="text"
+              name="message"
+              id="chat-input"
+              value={@input_value}
+              phx-change="update_input"
+              autocomplete="off"
+              placeholder="Ask a question…"
+              disabled={@status in [:thinking, :retrieving, :answering]}
+              phx-hook="FocusInput"
+              class={[
+                "w-full text-[0.84rem] rounded-xl border h-10 px-4",
+                "placeholder:text-gray-300 focus:outline-none focus:ring-2 focus:ring-[#03b6d4]/20 focus:border-[#03b6d4]/40",
+                "transition-all duration-200",
+                if(@status in [:thinking, :retrieving, :answering],
+                  do: "bg-gray-50 border-gray-100 text-gray-400 cursor-not-allowed",
+                  else: "bg-gray-50/50 border-gray-200 text-gray-800"
+                )
+              ]}
+            />
+          </div>
+          <button
+            type="submit"
+            disabled={@status in [:thinking, :retrieving, :answering] or @input_value == ""}
+            class={[
+              "flex-shrink-0 w-10 h-10 rounded-xl grid place-items-center transition-all duration-200",
+              if(@status in [:thinking, :retrieving, :answering] or @input_value == "",
+                do: "bg-gray-100 text-gray-300 cursor-not-allowed",
+                else:
+                  "bg-[#03b6d4] text-white hover:bg-[#029db8] shadow-sm shadow-[#03b6d4]/20 active:scale-95"
+              )
+            ]}
+          >
+            <svg
+              class="w-4 h-4"
+              fill="none"
+              stroke="currentColor"
+              stroke-width="2.5"
+              viewBox="0 0 24 24"
+            >
+              <path
+                stroke-linecap="round"
+                stroke-linejoin="round"
+                d="M6 12L3.269 3.126A59.768 59.768 0 0121.485 12 59.77 59.77 0 013.27 20.876L5.999 12zm0 0h7.5"
+              />
+            </svg>
+          </button>
+        </form>
+      </div>
     </div>
   </div>
+
+  <%!-- Feedback modal --%>
+  <%= if @show_feedback_modal do %>
+    <div
+      class="fixed inset-0 z-50 flex items-center justify-center bg-black/30 backdrop-blur-sm"
+      phx-click="close_feedback_modal"
+    >
+      <div
+        class="bg-white rounded-2xl shadow-2xl w-full max-w-md mx-4 overflow-hidden"
+        phx-click="noop"
+      >
+        <%!-- Modal header --%>
+        <div class="flex items-center justify-between px-6 pt-5 pb-3">
+          <h3 class="text-base font-semibold text-gray-900">Provide feedback</h3>
+          <button
+            phx-click="close_feedback_modal"
+            class="text-gray-400 hover:text-gray-600 transition-colors"
+          >
+            <svg
+              class="w-5 h-5"
+              fill="none"
+              stroke="currentColor"
+              stroke-width="2"
+              viewBox="0 0 24 24"
+            >
+              <path stroke-linecap="round" stroke-linejoin="round" d="M6 18L18 6M6 6l12 12" />
+            </svg>
+          </button>
+        </div>
+
+        <%!-- Feedback reasons --%>
+        <div class="px-6 pb-4">
+          <div class="flex flex-wrap gap-2 mb-4">
+            <%= for reason <- ["Not factually correct", "Too slow", "Outdated information", "Did not follow my request"] do %>
+              <button
+                phx-click="toggle_feedback_reason"
+                phx-value-reason={reason}
+                class={[
+                  "px-3.5 py-1.5 rounded-full text-sm border transition-all duration-150",
+                  if(reason in @feedback_reasons,
+                    do: "bg-[#03b6d4] text-white border-[#03b6d4]",
+                    else: "bg-white text-gray-600 border-gray-200 hover:border-gray-300"
+                  )
+                ]}
+              >
+                {reason}
+              </button>
+            <% end %>
+          </div>
+
+          <%!-- Optional comment --%>
+          <textarea
+            phx-change="update_feedback_comment"
+            name="comment"
+            rows="4"
+            placeholder="Tell us more about your feedback (optional)"
+            class="w-full text-sm border border-gray-200 rounded-xl px-4 py-3 resize-none placeholder:text-gray-300 focus:outline-none focus:ring-2 focus:ring-[#03b6d4]/20 focus:border-[#03b6d4]/40"
+          ><%= @feedback_comment %></textarea>
+        </div>
+
+        <%!-- Modal footer --%>
+        <div class="flex items-center justify-end gap-3 px-6 pb-5">
+          <button
+            phx-click="close_feedback_modal"
+            class="px-4 py-2 text-sm text-gray-500 hover:text-gray-700 transition-colors"
+          >
+            Cancel
+          </button>
+          <button
+            phx-click="submit_feedback"
+            class="px-5 py-2 text-sm font-medium text-white bg-[#03b6d4] hover:bg-[#029db8] rounded-lg shadow-sm transition-all active:scale-95"
+          >
+            Submit
+          </button>
+        </div>
+      </div>
+    </div>
+  <% end %>
 </ZaqWeb.Components.BOLayout.bo_layout>
