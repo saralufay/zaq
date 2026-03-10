@@ -76,7 +76,7 @@ defmodule Zaq.Engine.RetrievalSupervisor do
         [
           %{
             id: {adapter_module, config.id},
-            start: {adapter_module, :start_link, [config]},
+            start: {adapter_module, :connect, [config]},
             restart: :permanent
           }
         ]

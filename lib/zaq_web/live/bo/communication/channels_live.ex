@@ -2,6 +2,7 @@ defmodule ZaqWeb.Live.BO.Communication.ChannelsLive do
   use ZaqWeb, :live_view
 
   alias Zaq.Channels.ChannelConfig
+  alias Zaq.Channels.RetrievalChannel, as: RetChannel
   alias Zaq.Channels.Retrieval.Mattermost.API, as: MattermostAPI
   alias Zaq.Repo
   alias ZaqWeb.Components.ServiceUnavailable
@@ -34,6 +35,9 @@ defmodule ZaqWeb.Live.BO.Communication.ChannelsLive do
         provider |> String.replace("_", " ") |> String.capitalize()
       )
 
+    configs = if(available, do: list_configs(provider), else: [])
+    first_config = List.first(configs)
+
     {:ok,
      socket
      |> assign(:page_title, label)
@@ -42,7 +46,7 @@ defmodule ZaqWeb.Live.BO.Communication.ChannelsLive do
      |> assign(:provider_label, label)
      |> assign(:service_available, available)
      |> assign(:required_roles, @required_roles)
-     |> assign(:configs, if(available, do: list_configs(provider), else: []))
+     |> assign(:configs, configs)
      # config modal
      |> assign(:modal, nil)
      |> assign(:changeset, nil)
@@ -63,7 +67,16 @@ defmodule ZaqWeb.Live.BO.Communication.ChannelsLive do
      # clear channel
      |> assign(:clear_channel_id, "")
      |> assign(:confirm_clear, false)
-     |> assign(:clear_status, :idle)}
+     |> assign(:clear_status, :idle)
+     # --- retrieval channel picker ---
+     |> assign(:retrieval_channels, load_retrieval_channels(first_config))
+     |> assign(:teams, [])
+     |> assign(:teams_status, :idle)
+     |> assign(:available_channels, [])
+     |> assign(:channels_status, :idle)
+     |> assign(:selected_team_id, nil)
+     |> assign(:selected_team_name, nil)
+     |> assign(:confirm_remove_channel, nil)}
   end
 
   # -------------------------------------------------------------------------
@@ -127,12 +140,16 @@ defmodule ZaqWeb.Live.BO.Communication.ChannelsLive do
 
     case result do
       {:ok, _config} ->
+        configs = list_configs(socket.assigns.provider)
+        first_config = List.first(configs)
+
         {:noreply,
          socket
          |> assign(:modal, nil)
          |> assign(:changeset, nil)
          |> assign(:modal_errors, [])
-         |> assign(:configs, list_configs(socket.assigns.provider))
+         |> assign(:configs, configs)
+         |> assign(:retrieval_channels, load_retrieval_channels(first_config))
          |> put_flash(:info, "Channel config saved.")}
 
       {:error, changeset} ->
@@ -163,11 +180,14 @@ defmodule ZaqWeb.Live.BO.Communication.ChannelsLive do
 
       config ->
         Repo.delete!(config)
+        configs = list_configs(socket.assigns.provider)
+        first_config = List.first(configs)
 
         {:noreply,
          socket
          |> assign(:confirm_delete, nil)
-         |> assign(:configs, list_configs(socket.assigns.provider))
+         |> assign(:configs, configs)
+         |> assign(:retrieval_channels, load_retrieval_channels(first_config))
          |> put_flash(:info, "Channel config deleted.")}
     end
   end
@@ -326,6 +346,154 @@ defmodule ZaqWeb.Live.BO.Communication.ChannelsLive do
   end
 
   # -------------------------------------------------------------------------
+  # Retrieval Channel Picker
+  # -------------------------------------------------------------------------
+
+  def handle_event("fetch_teams", _params, socket) do
+    config = first_enabled_config(socket)
+
+    case config do
+      nil ->
+        {:noreply, put_flash(socket, :error, "No enabled Mattermost config found.")}
+
+      %ChannelConfig{} = cfg ->
+        socket = assign(socket, :teams_status, :loading)
+
+        case MattermostAPI.list_teams(cfg) do
+          {:ok, teams} ->
+            {:noreply,
+             socket
+             |> assign(:teams, teams)
+             |> assign(:teams_status, :ok)
+             |> assign(:available_channels, [])
+             |> assign(:channels_status, :idle)
+             |> assign(:selected_team_id, nil)
+             |> assign(:selected_team_name, nil)}
+
+          {:error, reason} ->
+            {:noreply,
+             socket
+             |> assign(:teams, [])
+             |> assign(:teams_status, {:error, reason})}
+        end
+    end
+  end
+
+  def handle_event("select_team", %{"team-id" => team_id, "team-name" => team_name}, socket) do
+    config = first_enabled_config(socket)
+
+    case config do
+      nil ->
+        {:noreply, put_flash(socket, :error, "No enabled Mattermost config found.")}
+
+      %ChannelConfig{} = cfg ->
+        socket =
+          socket
+          |> assign(:selected_team_id, team_id)
+          |> assign(:selected_team_name, team_name)
+          |> assign(:channels_status, :loading)
+
+        case MattermostAPI.list_public_channels(cfg, team_id) do
+          {:ok, channels} ->
+            # Filter out already-selected channels
+            existing_ids =
+              socket.assigns.retrieval_channels
+              |> Enum.map(& &1.channel_id)
+              |> MapSet.new()
+
+            available = Enum.reject(channels, fn ch -> MapSet.member?(existing_ids, ch.id) end)
+
+            {:noreply,
+             socket
+             |> assign(:available_channels, available)
+             |> assign(:channels_status, :ok)}
+
+          {:error, reason} ->
+            {:noreply,
+             socket
+             |> assign(:available_channels, [])
+             |> assign(:channels_status, {:error, reason})}
+        end
+    end
+  end
+
+  def handle_event("add_channel", %{"channel-id" => ch_id, "channel-name" => ch_name}, socket) do
+    config = first_enabled_config(socket)
+
+    case config do
+      nil ->
+        {:noreply, put_flash(socket, :error, "No enabled Mattermost config found.")}
+
+      %ChannelConfig{} = cfg ->
+        attrs = %{
+          channel_config_id: cfg.id,
+          channel_id: ch_id,
+          channel_name: ch_name,
+          team_id: socket.assigns.selected_team_id,
+          team_name: socket.assigns.selected_team_name,
+          active: true
+        }
+
+        case %RetChannel{} |> RetChannel.changeset(attrs) |> Repo.insert() do
+          {:ok, _rc} ->
+            notify_ws_reload()
+
+            available =
+              Enum.reject(socket.assigns.available_channels, fn ch -> ch.id == ch_id end)
+
+            {:noreply,
+             socket
+             |> assign(:retrieval_channels, load_retrieval_channels(cfg))
+             |> assign(:available_channels, available)
+             |> put_flash(:info, "#{ch_name} added as retrieval channel.")}
+
+          {:error, changeset} ->
+            errors = format_errors(changeset) |> Enum.join(", ")
+            {:noreply, put_flash(socket, :error, "Failed to add channel: #{errors}")}
+        end
+    end
+  end
+
+  def handle_event("toggle_channel_active", %{"id" => id}, socket) do
+    rc = Repo.get!(RetChannel, id)
+
+    rc
+    |> Ecto.Changeset.change(active: !rc.active)
+    |> Repo.update!()
+
+    config = first_enabled_config(socket)
+    notify_ws_reload()
+
+    {:noreply,
+     socket
+     |> assign(:retrieval_channels, load_retrieval_channels(config))
+     |> put_flash(:info, "#{rc.channel_name} #{if rc.active, do: "paused", else: "activated"}.")}
+  end
+
+  def handle_event("confirm_remove_channel", %{"id" => id}, socket) do
+    {:noreply, assign(socket, :confirm_remove_channel, id)}
+  end
+
+  def handle_event("cancel_remove_channel", _params, socket) do
+    {:noreply, assign(socket, :confirm_remove_channel, nil)}
+  end
+
+  def handle_event("remove_channel", _params, socket) do
+    id = socket.assigns.confirm_remove_channel
+    rc = Repo.get!(RetChannel, id)
+    Repo.delete!(rc)
+
+    config = first_enabled_config(socket)
+    notify_ws_reload()
+
+    {:noreply,
+     socket
+     |> assign(:confirm_remove_channel, nil)
+     |> assign(:retrieval_channels, load_retrieval_channels(config))
+     |> put_flash(:info, "#{rc.channel_name} removed.")}
+  end
+
+  # -------------------------------------------------------------------------
   # Private
   # -------------------------------------------------------------------------
 
@@ -334,6 +502,22 @@ defmodule ZaqWeb.Live.BO.Communication.ChannelsLive do
     |> where([c], c.provider == ^provider)
     |> order_by(asc: :name)
     |> Repo.all()
+  end
+
+  defp first_enabled_config(socket) do
+    Enum.find(socket.assigns.configs, & &1.enabled)
+  end
+
+  defp load_retrieval_channels(nil), do: []
+
+  defp load_retrieval_channels(%ChannelConfig{} = config) do
+    RetChannel.list_by_config(config.id)
+  end
+
+  defp notify_ws_reload do
+    if Process.whereis(Zaq.Channels.Retrieval.Mattermost) do
+      Zaq.Channels.Retrieval.Mattermost.reload_channels()
+    end
   end
 
   defp format_errors(%Ecto.Changeset{} = changeset) do

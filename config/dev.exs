@@ -11,7 +11,7 @@ config :zaq, Zaq.Repo,
   show_sensitive_data_on_connection_error: true,
   pool_size: 10
 
-config :zaq, roles: [:bo, :agent, :ingestion, :channels]
+config :zaq, roles: [:bo, :agent, :ingestion, :channels, :engine]
 # config :zaq, roles: [:bo]
 
 config :zaq, Zaq.Ingestion, base_path: "priv/documents"

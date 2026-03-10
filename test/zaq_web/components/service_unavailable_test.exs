@@ -1,5 +1,5 @@
 defmodule ZaqWeb.Components.ServiceUnavailableTest do
-  use ExUnit.Case, async: true
+  use ExUnit.Case, async: false
 
   import Mox
 

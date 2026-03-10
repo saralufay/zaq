@@ -47,7 +47,7 @@ config :zaq, Zaq.Agent.LLM,
   supports_logprobs: false,
   supports_json_mode: false
 
-config :zaq, roles: [:bo, :ingestion, :agent, :channels]
+config :zaq, roles: [:bo, :ingestion, :agent, :channels, :engine]
 
 config :zaq,
   license_runtime_key: true,

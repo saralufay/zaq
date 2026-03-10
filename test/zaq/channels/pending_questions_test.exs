@@ -1,10 +1,10 @@
 defmodule Zaq.Channels.PendingQuestionsTest do
-  use ExUnit.Case, async: true
+  use ExUnit.Case, async: false
 
   alias Zaq.Channels.PendingQuestions
 
   setup do
-    start_supervised!(PendingQuestions)
+    Agent.update(PendingQuestions, fn _state -> %{} end)
     :ok
   end
 
