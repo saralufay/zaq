@@ -35,7 +35,8 @@ config :zaq, Zaq.Embedding.Client,
 # --MOX--
 config :zaq,
   chunk_title_module: Zaq.Agent.ChunkTitleMock,
-  document_processor: Zaq.DocumentProcessorMock
+  document_processor: Zaq.DocumentProcessorMock,
+  node_router: Zaq.NodeRouterMock
 
 config :zaq, Zaq.Agent.LLM,
   endpoint: "http://localhost",
@@ -46,7 +47,7 @@ config :zaq, Zaq.Agent.LLM,
   supports_logprobs: false,
   supports_json_mode: false
 
-config :zaq, roles: [:bo, :ingestion, :agent]
+config :zaq, roles: [:bo, :ingestion, :agent, :channels]
 
 config :zaq,
   license_runtime_key: true,

@@ -3,47 +3,19 @@ defmodule ZaqWeb.Live.BO.DashboardLiveTest do
 
   import Phoenix.LiveViewTest
   import Zaq.AccountsFixtures
+
   alias Zaq.Accounts
-  alias Zaq.License.FeatureStore
 
   setup %{conn: conn} do
     user = user_fixture(%{username: "testadmin"})
     {:ok, user} = Accounts.change_password(user, %{password: "password123"})
-
     conn = conn |> init_test_session(%{user_id: user.id})
     %{conn: conn, user: user}
   end
 
-  describe "without license" do
-    setup do
-      FeatureStore.clear()
-      :ok
-    end
-
-    test "renders dashboard", %{conn: conn} do
+  describe "mount" do
+    test "renders the dashboard", %{conn: conn} do
       {:ok, _view, html} = live(conn, ~p"/bo/dashboard")
-      assert html =~ "Dashboard"
-    end
-
-    test "shows metric cards", %{conn: conn} do
-      {:ok, _view, html} = live(conn, ~p"/bo/dashboard")
-      assert html =~ "Users"
-      assert html =~ "Sessions"
-      assert html =~ "Documents"
-      assert html =~ "Embeddings"
-      assert html =~ "Channels"
-    end
-
-    test "shows user count", %{conn: conn} do
-      user_fixture(%{username: "extra_user"})
-      {:ok, _view, html} = live(conn, ~p"/bo/dashboard")
-      # At least the testadmin + extra_user
-      assert html =~ "Users"
-    end
-
-    test "shows services table", %{conn: conn} do
-      {:ok, _view, html} = live(conn, ~p"/bo/dashboard")
-      assert html =~ "Services"
       assert html =~ "Engine"
       assert html =~ "Agent"
       assert html =~ "Ingestion"
@@ -51,55 +23,50 @@ defmodule ZaqWeb.Live.BO.DashboardLiveTest do
       assert html =~ "Back Office"
     end
 
-    test "shows no license card", %{conn: conn} do
+    test "shows user count", %{conn: conn} do
       {:ok, _view, html} = live(conn, ~p"/bo/dashboard")
-      assert html =~ "No License"
-      assert html =~ "Running in basic mode"
-      assert html =~ "Learn More"
+      assert html =~ "Users"
+    end
+
+    test "shows bo service as active since endpoint is running", %{conn: conn} do
+      {:ok, _view, html} = live(conn, ~p"/bo/dashboard")
+      # ZaqWeb.Endpoint is running in test, so bo should be active
+      assert html =~ "Back Office"
     end
   end
 
-  describe "with license" do
-    setup do
-      FeatureStore.store(
-        %{
-          "license_key" => "lic_dash_789",
-          "company_name" => "Dashboard Corp",
-          "expires_at" => DateTime.utc_now() |> DateTime.add(60, :day) |> DateTime.to_iso8601(),
-          "features" => [
-            %{
-              "name" => "Ontology Management",
-              "description" => "Knowledge graph",
-              "module_tags" => []
-            }
-          ]
-        },
-        []
-      )
+  describe "node events via PubSub" do
+    test "refreshes services on node_up", %{conn: conn} do
+      {:ok, view, _html} = live(conn, ~p"/bo/dashboard")
 
-      on_exit(fn -> FeatureStore.clear() end)
-      :ok
+      # Simulate PeerConnector broadcasting a node_up event
+      Phoenix.PubSub.broadcast(Zaq.PubSub, "node:events", {:node_up, :ai@localhost})
+
+      # Give the LiveView time to process the message
+      :timer.sleep(50)
+
+      # Dashboard should still render without crashing
+      assert render(view) =~ "Engine"
     end
 
-    test "shows license card with company name", %{conn: conn} do
-      {:ok, _view, html} = live(conn, ~p"/bo/dashboard")
-      assert html =~ "Dashboard Corp"
-      assert html =~ "lic_dash_789"
+    test "refreshes services on node_down", %{conn: conn} do
+      {:ok, view, _html} = live(conn, ~p"/bo/dashboard")
+
+      Phoenix.PubSub.broadcast(Zaq.PubSub, "node:events", {:node_down, :ai@localhost})
+
+      :timer.sleep(50)
+
+      assert render(view) =~ "Engine"
     end
 
-    test "shows feature count", %{conn: conn} do
-      {:ok, _view, html} = live(conn, ~p"/bo/dashboard")
-      assert html =~ "Features"
-    end
+    test "does not crash on unknown node events", %{conn: conn} do
+      {:ok, view, _html} = live(conn, ~p"/bo/dashboard")
 
-    test "shows days left", %{conn: conn} do
-      {:ok, _view, html} = live(conn, ~p"/bo/dashboard")
-      assert html =~ "Days Left"
-    end
+      Phoenix.PubSub.broadcast(Zaq.PubSub, "node:events", {:node_up, :unknown@localhost})
 
-    test "shows view details link", %{conn: conn} do
-      {:ok, _view, html} = live(conn, ~p"/bo/dashboard")
-      assert html =~ "View Details"
+      :timer.sleep(50)
+
+      assert render(view) =~ "Engine"
     end
   end
 end

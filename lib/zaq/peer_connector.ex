@@ -1,22 +1,39 @@
 defmodule Zaq.PeerConnector do
   @moduledoc """
-  Connects to peer nodes reactively using :net_kernel.monitor_nodes/1.
+  Auto-discovers and connects to peer nodes via EPMD — no NODES env var needed.
 
-  Instead of polling, this GenServer subscribes to node up/down events.
-  When a peer listed in NODES comes online, it connects immediately.
+  On startup and on every nodeup event, queries EPMD for all named nodes
+  running on the same host and attempts to connect to each. Nodes with a
+  different cookie are silently skipped by the Erlang runtime.
 
-  Called from application.ex after the supervision tree starts:
+  Broadcasts node up/down events via Phoenix.PubSub so LiveViews can
+  react without managing their own monitor_nodes subscriptions.
 
-      Zaq.PeerConnector.start_link([])
+  ## PubSub messages
 
-  Controlled via the NODES env var:
+      {:node_up, node_name}
+      {:node_down, node_name}
 
-      NODES=ai@localhost,channels@localhost mix phx.server
+  ## Usage
+
+      # Subscribe in a LiveView
+      Phoenix.PubSub.subscribe(Zaq.PubSub, "node:events")
+
+      def handle_info({:node_up, _node}, socket), do: ...
+      def handle_info({:node_down, _node}, socket), do: ...
+
+  ## Dev commands — no NODES needed
+
+      ROLES=bo           iex --sname bo@localhost       --cookie zaq_dev -S mix phx.server
+      ROLES=agent,ingestion iex --sname ai@localhost    --cookie zaq_dev -S mix
+      ROLES=channels     iex --sname channels@localhost --cookie zaq_dev -S mix
   """
 
   use GenServer
 
   require Logger
+
+  @topic "node:events"
 
   def start_link(opts) do
     GenServer.start_link(__MODULE__, opts, name: __MODULE__)
@@ -24,53 +41,23 @@ defmodule Zaq.PeerConnector do
 
   @impl true
   def init(_opts) do
-    expected = parse_peers()
-
-    if expected == [] do
-      :ignore
-    else
-      # Subscribe to node up/down events
-      :net_kernel.monitor_nodes(true)
-
-      # Try connecting to any that are already up
-      remaining = connect_available(expected)
-
-      if remaining == [] do
-        Logger.info("[PeerConnector] All peer nodes connected.")
-        {:ok, %{remaining: []}, {:continue, :stop}}
-      else
-        Logger.info("[PeerConnector] Waiting for nodes: #{inspect(remaining)}")
-        {:ok, %{remaining: remaining}}
-      end
-    end
-  end
-
-  @impl true
-  def handle_continue(:stop, state) do
-    {:stop, :normal, state}
+    :net_kernel.monitor_nodes(true)
+    connect_epmd_peers()
+    {:ok, %{}}
   end
 
   @impl true
   def handle_info({:nodeup, node}, state) do
-    if node in state.remaining do
-      Logger.info("[PeerConnector] Connected to peer node: #{node}")
-      remaining = List.delete(state.remaining, node)
-
-      if remaining == [] do
-        Logger.info("[PeerConnector] All peer nodes connected.")
-        :net_kernel.monitor_nodes(false)
-        {:stop, :normal, %{state | remaining: []}}
-      else
-        Logger.info("[PeerConnector] Still waiting for: #{inspect(remaining)}")
-        {:noreply, %{state | remaining: remaining}}
-      end
-    else
-      {:noreply, state}
-    end
+    Logger.info("[PeerConnector] Node up: #{node}")
+    Phoenix.PubSub.broadcast(Zaq.PubSub, @topic, {:node_up, node})
+    connect_epmd_peers()
+    {:noreply, state}
   end
 
+  @impl true
   def handle_info({:nodedown, node}, state) do
-    Logger.warning("[PeerConnector] Peer node went down: #{node}")
+    Logger.warning("[PeerConnector] Node down: #{node}")
+    Phoenix.PubSub.broadcast(Zaq.PubSub, @topic, {:node_down, node})
     {:noreply, state}
   end
 
@@ -78,28 +65,41 @@ defmodule Zaq.PeerConnector do
 
   # -- Private --
 
-  defp connect_available(peers) do
-    Enum.reduce(peers, [], fn node, remaining ->
-      case Node.connect(node) do
-        true ->
-          Logger.info("[PeerConnector] Connected to peer node: #{node}")
-          remaining
+  defp connect_epmd_peers do
+    host = host()
 
-        _ ->
-          [node | remaining]
-      end
-    end)
+    case :erl_epmd.names(host) do
+      {:ok, entries} ->
+        entries
+        |> Enum.map(fn {name, _port} -> :"#{name}@#{host}" end)
+        |> Enum.reject(&(&1 == node()))
+        |> Enum.each(&connect_peer/1)
+
+      {:error, reason} ->
+        Logger.debug("[PeerConnector] EPMD query failed: #{inspect(reason)}")
+    end
   end
 
-  defp parse_peers do
-    case System.get_env("NODES") do
-      nil ->
-        []
+  defp connect_peer(node) do
+    case Node.connect(node) do
+      true ->
+        Logger.info("[PeerConnector] Connected to: #{node}")
 
-      nodes_str ->
-        nodes_str
-        |> String.split(",")
-        |> Enum.map(&(&1 |> String.trim() |> String.to_atom()))
+      false ->
+        Logger.debug(
+          "[PeerConnector] Could not connect to: #{node} (different cookie or unreachable)"
+        )
+
+      :ignored ->
+        Logger.debug("[PeerConnector] Not distributed, skipping: #{node}")
     end
+  end
+
+  defp host do
+    node()
+    |> Atom.to_string()
+    |> String.split("@")
+    |> List.last()
+    |> String.to_charlist()
   end
 end

@@ -17,6 +17,8 @@ defmodule Zaq.NodeRouter do
       NodeRouter.call(:agent, Zaq.Agent.Retrieval, :ask, [question, opts])
   """
 
+  @behaviour Zaq.NodeRouter.Behaviour
+
   @supervisor_map %{
     agent: Zaq.Agent.Supervisor,
     ingestion: Zaq.Ingestion.Supervisor,
@@ -37,7 +39,7 @@ defmodule Zaq.NodeRouter do
   """
   def call(role, mod, fun, args) do
     supervisor = Map.fetch!(@supervisor_map, role)
-    target = find_node(supervisor)
+    target = find_node(supervisor) || node()
 
     if target == node() do
       apply(mod, fun, args)
@@ -52,7 +54,7 @@ defmodule Zaq.NodeRouter do
   @doc """
   Returns the node where the given supervisor is running.
   Checks local node first, then all connected peers.
-  Returns the local node as fallback if not found anywhere.
+  Returns nil if not found anywhere.
   """
   def find_node(supervisor) do
     all_nodes = [node() | Node.list()]
@@ -70,4 +72,9 @@ defmodule Zaq.NodeRouter do
       _pid -> true
     end
   end
+end
+
+defmodule Zaq.NodeRouter.Behaviour do
+  @moduledoc false
+  @callback find_node(supervisor :: atom()) :: node() | nil
 end

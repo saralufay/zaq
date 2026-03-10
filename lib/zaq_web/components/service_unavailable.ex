@@ -24,6 +24,8 @@ defmodule ZaqWeb.Components.ServiceUnavailable do
 
   alias Zaq.NodeRouter
 
+  defp node_router, do: Application.get_env(:zaq, :node_router, NodeRouter)
+
   @supervisor_map %{
     agent: Zaq.Agent.Supervisor,
     ingestion: Zaq.Ingestion.Supervisor,
@@ -173,12 +175,11 @@ defmodule ZaqWeb.Components.ServiceUnavailable do
 
   defp role_running?(role) do
     supervisor = Map.fetch!(@supervisor_map, role)
-    node = NodeRouter.find_node(supervisor)
 
-    if node == node() do
-      Process.whereis(supervisor) != nil
-    else
-      true
+    case node_router().find_node(supervisor) do
+      nil -> false
+      n when n == node() -> Process.whereis(supervisor) != nil
+      _peer -> true
     end
   end
 

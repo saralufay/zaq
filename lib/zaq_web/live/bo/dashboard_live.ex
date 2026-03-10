@@ -15,6 +15,8 @@ defmodule ZaqWeb.Live.BO.DashboardLive do
   }
 
   def mount(_params, _session, socket) do
+    if connected?(socket), do: Phoenix.PubSub.subscribe(Zaq.PubSub, "node:events")
+
     license_data = FeatureStore.license_data()
 
     days_left =
@@ -29,28 +31,12 @@ defmodule ZaqWeb.Live.BO.DashboardLive do
           end
       end
 
-    services = [
-      %{name: "Engine", role: :engine, description: "Sessions, ontology, API routing"},
-      %{name: "Agent", role: :agent, description: "RAG, LLM, classifier"},
-      %{name: "Ingestion", role: :ingestion, description: "Document processing, embeddings"},
-      %{name: "Channels", role: :channels, description: "Mattermost, Slack, Email"},
-      %{name: "Back Office", role: :bo, description: "Admin panel (LiveView)"}
-    ]
-
-    running = detect_running_services()
-
-    services =
-      Enum.map(services, fn svc ->
-        {active, node} = Map.get(running, svc.role, {false, nil})
-        svc |> Map.put(:active, active) |> Map.put(:node, node)
-      end)
-
     {:ok,
      assign(socket,
        current_path: "/bo/dashboard",
        license_data: license_data,
        days_left: days_left,
-       services: services,
+       services: refresh_services(),
        user_count: length(Accounts.list_users()),
        # Placeholders — wire up later
        session_count: 0,
@@ -60,7 +46,31 @@ defmodule ZaqWeb.Live.BO.DashboardLive do
      )}
   end
 
+  # -- Node event handlers --
+
+  @impl true
+  def handle_info({event, _node}, socket) when event in [:node_up, :node_down] do
+    {:noreply, assign(socket, :services, refresh_services())}
+  end
+
   # -- Private --
+
+  defp refresh_services do
+    service_defs = [
+      %{name: "Engine", role: :engine, description: "Sessions, ontology, API routing"},
+      %{name: "Agent", role: :agent, description: "RAG, LLM, classifier"},
+      %{name: "Ingestion", role: :ingestion, description: "Document processing, embeddings"},
+      %{name: "Channels", role: :channels, description: "Mattermost, Slack, Email"},
+      %{name: "Back Office", role: :bo, description: "Admin panel (LiveView)"}
+    ]
+
+    running = detect_running_services()
+
+    Enum.map(service_defs, fn svc ->
+      {active, node} = Map.get(running, svc.role, {false, nil})
+      svc |> Map.put(:active, active) |> Map.put(:node, node)
+    end)
+  end
 
   # Checks local node + all connected peer nodes for each supervisor.
   # Returns %{role => {true | false, node_name}}
