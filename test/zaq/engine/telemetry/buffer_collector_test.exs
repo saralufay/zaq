@@ -19,13 +19,14 @@ defmodule Zaq.Engine.Telemetry.BufferCollectorTest do
       "telemetry.repo_query_duration_threshold_ms"
     ]
 
+    if pid = Process.whereis(Buffer) do
+      Sandbox.allow(Repo, self(), pid)
+      Buffer.flush()
+    end
+
     Repo.delete_all(Point)
     Repo.delete_all(from c in Config, where: c.key in ^keys)
     reload_collector_policy()
-
-    if pid = Process.whereis(Buffer) do
-      Sandbox.allow(Repo, self(), pid)
-    end
 
     on_exit(fn ->
       Repo.delete_all(from c in Config, where: c.key in ^keys)
