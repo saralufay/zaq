@@ -10,23 +10,32 @@ defmodule ZaqWeb.Live.BO.AI.IngestionLive do
   alias Zaq.NodeRouter
   alias Zaq.System
   alias ZaqWeb.Live.BO.PreviewHelpers
+  alias ZaqWeb.Live.BO.AI.UrlCrawlerPreview
 
   @allowed_extensions ~w(.md .txt .pdf .docx .pptx .xlsx .csv .png .jpg .jpeg)
   @ingestion_topic "ingestion:jobs"
 
+  @impl true
   def mount(_params, _session, socket) do
     if connected?(socket), do: Phoenix.PubSub.subscribe(Zaq.PubSub, @ingestion_topic)
 
     volumes = fetch_volumes()
-    current_volume = volumes |> Map.keys() |> List.first()
+    current_volume = default_volume_name(volumes)
 
     {:ok,
      socket
-     |> assign(
-       current_path: "/bo/ingestion",
-       current_dir: ".",
-       breadcrumbs: [],
-       entries: [],
+      |> assign(
+        current_path: "/bo/ingestion",
+        section: "files",
+        crawler_status_filter: "all",
+        crawler_status_filters: UrlCrawlerPreview.list_filters(),
+        crawler_search_query: "",
+        crawler_rows: UrlCrawlerPreview.list_rows(),
+        crawler_counters: UrlCrawlerPreview.counters(),
+        crawler_last_action: nil,
+        current_dir: ".",
+        breadcrumbs: [],
+        entries: [],
        selected: MapSet.new(),
        jobs: [],
        status_filter: "all",
@@ -62,14 +71,34 @@ defmodule ZaqWeb.Live.BO.AI.IngestionLive do
        # Raw MD modal state
        raw_content: "",
        raw_filename: "",
-       preview: nil
-     )
-     |> load_entries()
-     |> load_jobs()
-     |> allow_upload(:files,
-       accept: @allowed_extensions,
-       max_entries: 10,
-       max_file_size: 20_000_000
+        preview: nil,
+        crawl_output_details: nil
+      )
+      |> load_entries()
+      |> assign_crawl_output_details()
+      |> load_jobs()
+      |> allow_upload(:files,
+        accept: @allowed_extensions,
+        max_entries: 10,
+        max_file_size: 20_000_000
+      )}
+  end
+
+  @impl true
+  def handle_params(params, _uri, socket) do
+    section = sanitize_section(params["section"])
+    crawler_status = sanitize_crawler_status(params["crawler_status"] || params["status"])
+    crawler_search_query = String.trim(params["q"] || "")
+    crawler_rows = UrlCrawlerPreview.list_rows(crawler_status, crawler_search_query)
+
+    {:noreply,
+     socket
+     |> assign(
+       section: section,
+       crawler_status_filter: crawler_status,
+       crawler_search_query: crawler_search_query,
+       crawler_rows: crawler_rows,
+       crawler_counters: UrlCrawlerPreview.counters(crawler_rows)
      )}
   end
 
@@ -79,6 +108,7 @@ defmodule ZaqWeb.Live.BO.AI.IngestionLive do
 
   # Permission sharing (share modal)
 
+  @impl true
   def handle_event("share_item", %{"path" => path, "type" => "directory"}, socket) do
     all_targets = socket.assigns.share_modal_all_targets
 
@@ -289,7 +319,8 @@ defmodule ZaqWeb.Live.BO.AI.IngestionLive do
     {:noreply,
      socket
      |> assign(current_volume: volume, current_dir: ".", breadcrumbs: [], selected: MapSet.new())
-     |> load_entries()}
+     |> load_entries()
+     |> assign_crawl_output_details()}
   end
 
   # File Browser
@@ -299,7 +330,8 @@ defmodule ZaqWeb.Live.BO.AI.IngestionLive do
      socket
      |> assign(current_dir: path, selected: MapSet.new())
      |> assign_breadcrumbs(path)
-     |> load_entries()}
+     |> load_entries()
+     |> assign_crawl_output_details()}
   end
 
   def handle_event("go_back", _params, socket) do
@@ -309,7 +341,8 @@ defmodule ZaqWeb.Live.BO.AI.IngestionLive do
      socket
      |> assign(current_dir: parent, selected: MapSet.new())
      |> assign_breadcrumbs(parent)
-     |> load_entries()}
+     |> load_entries()
+     |> assign_crawl_output_details()}
   end
 
   def handle_event("toggle_select", %{"path" => path}, socket) do
@@ -318,7 +351,7 @@ defmodule ZaqWeb.Live.BO.AI.IngestionLive do
         do: MapSet.delete(socket.assigns.selected, path),
         else: MapSet.put(socket.assigns.selected, path)
 
-    {:noreply, assign(socket, selected: selected)}
+    {:noreply, socket |> assign(selected: selected) |> assign_crawl_output_details()}
   end
 
   def handle_event("select_all", _params, socket) do
@@ -332,7 +365,7 @@ defmodule ZaqWeb.Live.BO.AI.IngestionLive do
         do: MapSet.new(),
         else: all_paths
 
-    {:noreply, assign(socket, selected: selected)}
+    {:noreply, socket |> assign(selected: selected) |> assign_crawl_output_details()}
   end
 
   # View Mode
@@ -524,7 +557,10 @@ defmodule ZaqWeb.Live.BO.AI.IngestionLive do
   end
 
   def handle_event("open_preview", %{"path" => path}, socket) do
-    {:noreply, PreviewHelpers.open_preview(socket, path, :modal)}
+    {:noreply,
+     socket
+     |> PreviewHelpers.open_preview(path, :modal)
+     |> assign_crawl_output_details()}
   end
 
   def handle_event("close_preview_modal", _params, socket) do
@@ -640,6 +676,15 @@ defmodule ZaqWeb.Live.BO.AI.IngestionLive do
      |> load_jobs()}
   end
 
+  def handle_event("relaunch_crawl", %{"id" => id}, socket) do
+    configuration = UrlCrawlerPreview.configuration!(id)
+
+    {:noreply,
+     socket
+     |> assign(crawler_last_action: "Run requested for #{configuration.crawl_label}")
+     |> put_flash(:info, "Preview only: open the configuration to choose an ingestion strategy and launch a run.")}
+  end
+
   # Upload
 
   def handle_event("validate_upload", _params, socket), do: {:noreply, socket}
@@ -676,6 +721,7 @@ defmodule ZaqWeb.Live.BO.AI.IngestionLive do
   # handle_info/2
   # ────────────────────────────────────────────────────────────────
 
+  @impl true
   def handle_info({:job_updated, job}, socket) do
     socket =
       socket
@@ -752,6 +798,27 @@ defmodule ZaqWeb.Live.BO.AI.IngestionLive do
     end
   end
 
+  defp assign_crawl_output_details(socket) do
+    details =
+      if crawl_output_volume?(socket) do
+        socket.assigns.selected
+        |> MapSet.to_list()
+        |> Enum.sort()
+        |> Enum.find_value(&crawl_output_details_for_path/1)
+      end
+
+    assign(socket, crawl_output_details: details)
+  end
+
+  defp crawl_output_details_for_path(path) do
+    relative_path =
+      path
+      |> String.trim_leading("./")
+      |> String.trim_leading("/")
+
+    UrlCrawlerPreview.crawl_output_file_details(relative_path)
+  end
+
   defp load_jobs(socket) do
     opts =
       case socket.assigns.status_filter do
@@ -794,6 +861,36 @@ defmodule ZaqWeb.Live.BO.AI.IngestionLive do
 
   defp maybe_update_folder_public(volume, path, false, _),
     do: Ingestion.unset_folder_public(volume, path)
+
+  defp crawl_output_volume?(socket), do: socket.assigns.current_volume == "URL Crawling"
+
+  defp sanitize_section(section) when section in ["files", "url_crawler"], do: section
+  defp sanitize_section(_), do: "files"
+
+  defp sanitize_crawler_status(status)
+        when status in [
+               "all",
+               "active",
+               "attention",
+               "ingested",
+               "draft",
+               "analyzing",
+               "ready_for_approval",
+               "running",
+               "done",
+              "partial_success",
+              "failed",
+              "cancelled"
+            ],
+    do: status
+
+  defp sanitize_crawler_status(_), do: "all"
+
+  def crawler_status_classes(status), do: UrlCrawlerPreview.status_classes(status)
+  def crawler_status_label("active"), do: "Active"
+  def crawler_status_label("attention"), do: "Attention"
+  def crawler_status_label("ingested"), do: "Ingested"
+  def crawler_status_label(status), do: UrlCrawlerPreview.status_label(status)
 
   defp maybe_update_document_public(_doc_id, same, same), do: :ok
 
@@ -856,8 +953,28 @@ defmodule ZaqWeb.Live.BO.AI.IngestionLive do
 
   defp fetch_volumes do
     case ingestion_call(:list_volumes, []) do
-      volumes when is_map(volumes) and map_size(volumes) > 0 -> volumes
-      _ -> %{"default" => "priv/documents"}
+      volumes when is_map(volumes) and map_size(volumes) > 0 -> ensure_url_crawling_volume(volumes)
+      _ -> ensure_url_crawling_volume(%{"documents" => "priv/documents"})
+    end
+  end
+
+  defp ensure_url_crawling_volume(volumes) do
+    base_root = Map.get(volumes, "documents") || Map.get(volumes, "default") || volumes |> Map.values() |> List.first()
+    crawler_root = Path.join(base_root, "web/crawled")
+    File.mkdir_p!(crawler_root)
+    Map.put_new(volumes, "URL Crawling", crawler_root)
+  end
+
+  defp default_volume_name(volumes) do
+    cond do
+      Map.has_key?(volumes, "documents") -> "documents"
+      Map.has_key?(volumes, "default") -> "default"
+      true ->
+        volumes
+        |> Map.keys()
+        |> Enum.reject(&(&1 == "URL Crawling"))
+        |> Enum.sort()
+        |> List.first()
     end
   end
 
